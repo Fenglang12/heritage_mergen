@@ -1,0 +1,94 @@
+{
+  "analyze_presets": [
+    {
+      "id": "yueju",
+      "ai_text": "【非遗条目】：广东省广州市 | 醒狮\n【非遗条目】：广州市 | 粤剧\n图片呈现了岭南醒狮与戏曲民俗交融的非遗场景，色彩浓烈，具有鲜明的地方文化特征。",
+      "city": "广州市",
+      "markers": [
+        {
+          "id": "demo-gz-yueju-1",
+          "base_name": "粤剧艺术博物馆",
+          "address": "广州市荔湾区恩宁路127号",
+          "lng": 113.233,
+          "lat": 23.1182,
+          "ai_intro": "岭南粤剧展演与传习的重要场馆，可体验唱腔、服饰与行当文化。"
+        },
+        {
+          "id": "demo-gz-bahwo-1",
+          "base_name": "八和会馆",
+          "address": "广州市荔湾区恩宁路",
+          "lng": 113.2341,
+          "lat": 23.1168,
+          "ai_intro": "海内外粤剧艺人团体「八和」旧址，与粤剧、醒狮民俗渊源深厚。"
+        },
+        {
+          "id": "demo-gz-heritage-1",
+          "base_name": "花洲素馨非遗馆（永庆坊）",
+          "address": "广州市荔湾区多宝街永庆坊非遗街区",
+          "lng": 113.2335,
+          "lat": 23.1176,
+          "ai_intro": "永庆坊非遗主题空间，展示素馨花传说与传统制香技艺。"
+        },
+        {
+          "id": "demo-gz-lion-2",
+          "base_name": "广东醒狮（永庆坊店）",
+          "address": "广州市荔湾区恩宁路永庆坊历史文化街区",
+          "lng": 113.2346,
+          "lat": 23.1183,
+          "ai_intro": "永庆坊片区内的醒狮文化体验点，可观看广府醒狮表演。"
+        },
+        {
+          "id": "demo-gz-lion-1",
+          "base_name": "南国醒狮",
+          "address": "广州市荔湾区永庆坊",
+          "lng": 113.2352,
+          "lat": 23.118,
+          "ai_intro": "岭南醒狮民俗展示与传习空间，适合了解狮头扎作与节庆表演。"
+        }
+      ]
+    },
+    {
+      "id": "paper_cut",
+      "ai_text": "【非遗条目】：陕北 | 剪纸\n图片中的剪纸纹样对称精美，朱砂红与金色搭配，体现民间美术的吉祥寓意。",
+      "city": "延安市",
+      "markers": [
+        {
+          "id": "demo-cut-1",
+          "base_name": "陕北剪纸传习所",
+          "address": "延安市宝塔区",
+          "lng": 109.4897,
+          "lat": 36.5853,
+          "ai_intro": "陕北剪纸技艺传习与展示空间，以对称纹样与吉祥寓意见长。"
+        }
+      ]
+    }
+  ],
+  "art_presets": [
+    {
+      "keywords": ["赛博", "朋克", "cyber"],
+      "analysis": "剪纸纹样、霓虹光效、对称构图",
+      "image_data": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiMwZTEwMTU7c3RvcC1vcGFjaXR5OjEiLz48c3RvcCBvZmZsetPSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojM2Q5ZThjO3N0b3Atb3BhY2l0eToxIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNnKSIvPjx0ZXh0IHg9IjUwJSIgeT0iNDglIiBmb250LWZhbWlseT1zYW5zLXNlcmlmIiBmb250LXNpemU9IjIyIiBmaWxsPSIjM2Q5ZThjIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7mn6Xor6LmlrDnmoTlrprnlKjvvIzor7fmsYI8L3RleHQ+PHRleHQgeD0iNTAlIiB5PSI1OCUiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiNjOWE4NGMiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuWwj+WPtzwvdGV4dD48L3N2Zz4="
+    },
+    {
+      "keywords": ["国潮", "插画", "敦煌"],
+      "analysis": "朱砂红、石青、祥云纹样",
+      "image_data": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIj48cmVjdCBmaWxsPSIjMWExZjI3IiB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIi8+PHRleHQgeD0iNTAlIiB5PSI0OCUiIGZvbnQtZmFtaWx5PXNlcmlmIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IiNjOWE4NGMiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuWwj+aciemAuTwvdGV4dD48dGV4dCB4PSI1MCUiIHk9IjU4JSIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzNkOWU4YyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+5rC45pa55Zu+54mHPC90ZXh0Pjwvc3ZnPg=="
+    },
+    {
+      "keywords": [],
+      "analysis": "剪纸纹样、朱砂红配色、对称构图",
+      "image_data": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIj48cmVjdCBmaWxsPSIjMWExZjI3IiB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PXNhbnMtc2VyaWYgZm9udC1zaXplPSIyMCIgZmlsbD0iIzNkOWU4YyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuaXoOazleiDveWKoOi9ve+8gOivt+axgjwvdGV4dD48L3N2Zz4="
+    }
+  ],
+  "chat_replies": [
+    {
+      "keywords": ["粤剧"],
+      "text": "粤剧是流行于岭南地区的传统戏曲，2009年列入人类非遗代表作名录。唱腔优美，服饰华丽。\n\n👉 想看看你附近的粤剧博物馆吗？[查看地图](/map)\n👉 想试试粤剧相关的闯关题吗？[开始答题](/quiz)"
+    },
+    {
+      "keywords": ["剪纸", "焕新", "赛博"],
+      "text": "剪纸是非遗民间美术的代表，纹样多含吉祥寓意。上传参考图后可以说「帮我做成赛博朋克风格」，我会在对话里直接为你焕新。\n\n👉 去数字焕新页面试试？[非遗焕新](/revive)"
+    }
+  ],
+  "chat_default": "我是时空匠影非遗向导，可答非遗百科、推荐地图标点、协助数字焕新与研学报告。\n\n👉 打开地图：[查看地图](/map)\n👉 打开报告：[研学报告](/report)"
+}

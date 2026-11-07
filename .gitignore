@@ -1,0 +1,47 @@
+# ── 密钥与本地配置（切勿提交）──
+**/.env
+!**/.env.example
+
+# ── Python ──
+**/__pycache__/
+**/*.py[cod]
+.venv/
+venv/
+env/
+
+# ── 前端构建产物 ──
+vue-ep-frontend/node_modules/
+vue-ep-frontend/dist/
+
+# ── IDE / 编辑器 / Agent 工具（非业务代码，勿入库）──
+.idea/
+.vscode/
+.claude/
+.cursor/
+.agents/
+agent-tools-doc-extract.txt
+*.swp
+.DS_Store
+Thumbs.db
+
+# ── 后端运行时与原始大文件 ──
+backend_clean/uploads/
+backend_clean/logs/
+backend_clean/*.log
+backend_clean/_boot_*.txt
+backend_clean/*.csv
+backend_clean/tempfile_*.sql
+
+# ── 本地备份 / 调试 / 素材（勿入库）──
+backups/
+debug.log
+*.zip
+素材/
+
+# JSON 默认忽略，保留图谱清洗结果与演示数据
+backend_clean/**/*.json
+!backend_clean/clean_nodes.json
+!backend_clean/clean_edges.json
+!backend_clean/features/demo/data/demo_data.json
+
+# chroma_db/ 向量库（约 51MB）纳入版本库，克隆后可直接使用 RAG，无需再跑 build_rag_db.py

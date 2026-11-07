@@ -1,0 +1,35 @@
+# 环境变量（绝对不能提交！）
+.env
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 虚拟环境
+venv/
+.venv/
+env/
+
+# 原始 CSV（仓库内提供 clean_*.json）
+*.csv
+
+# JSON 默认忽略，保留图谱与演示数据
+*.json
+!clean_nodes.json
+!clean_edges.json
+!features/demo/data/demo_data.json
+
+# chroma_db/ 向量库纳入 Git（约 51MB），勿加入本忽略列表
+
+# 运行时目录
+uploads/
+logs/
+*.log
+tempfile_*.sql
+
+# IDE
+.idea/
+.vscode/
+*.swp
