@@ -1,8 +1,11 @@
-# import_to_mysql.py
+"""将清洗后的图谱节点/关系导入 MySQL。"""
+
 import json
+
 import pymysql
+
 from core.config import Config
-import re
+
 
 def init_mysql_graph():
     print("⏳ 连接 MySQL 数据库...")
@@ -43,7 +46,7 @@ def init_mysql_graph():
 
     # 2. 导入节点数据
     print("⏳ 开始导入节点数据...")
-    with open('clean_nodes.json', 'r', encoding='utf-8') as f:
+    with open('clean_nodes.json', encoding='utf-8') as f:
         nodes = json.load(f)
         for node in nodes:
             cursor.execute(
@@ -53,7 +56,7 @@ def init_mysql_graph():
 
     # 3. 导入关系（边）数据
     print("⏳ 开始导入关系数据...")
-    with open('clean_edges.json', 'r', encoding='utf-8') as f:
+    with open('clean_edges.json', encoding='utf-8') as f:
         edges = json.load(f)
         for edge in edges:
             cursor.execute(

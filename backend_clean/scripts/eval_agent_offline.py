@@ -15,14 +15,14 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from features.agent.memory import (  # noqa: E402
+from features.agent.memory import (
     empty_memory,
     extract_open_place_keyword,
     message_continues_goal,
     message_diverges_from_goal,
     update_memory_from_turn,
 )
-from features.agent.parse import (  # noqa: E402
+from features.agent.parse import (
     append_grounding_block,
     build_grounded_places_answer,
     build_soft_prior_hint,
@@ -34,7 +34,7 @@ from features.agent.parse import (  # noqa: E402
     should_hint_revive,
     should_plan_study_tour,
 )
-from features.agent.schema import validate_tool_args  # noqa: E402
+from features.agent.schema import validate_tool_args
 
 
 def predict_tools(message: str) -> list[str]:
@@ -206,7 +206,7 @@ def main() -> int:
         f'- 用例数：{total}',
         f'- 通过：{passed}',
         f'- 成功率：**{rate:.1f}%**',
-        f'- 脚本：`scripts/eval_agent_offline.py`（不调星火/外网）',
+        '- 脚本：`scripts/eval_agent_offline.py`（不调星火/外网）',
         '',
         '| ID | 结果 | 说明 |',
         '|---|---|---|',

@@ -8,6 +8,10 @@
 .venv/
 venv/
 env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+**/.ruff_cache/
 
 # ── 前端构建产物 ──
 vue-ep-frontend/node_modules/

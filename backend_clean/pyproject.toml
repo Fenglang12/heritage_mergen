@@ -1,0 +1,17 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+exclude = [".venv", "__pycache__", "chroma_db"]
+
+[tool.ruff.lint]
+# 采用主流基础规则：语法错误、未使用导入/变量、导入排序、pyupgrade
+select = ["E4", "E7", "E9", "F", "I", "UP"]
+# 长行由格式化器/编辑器处理，不阻断 CI
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# app.py：需在导入 Flask 前设置 HF_ENDPOINT；模型导入用于 db.create_all() 注册表
+"app.py" = ["I001", "F401"]
+# 离线评测/冒烟脚本：先 sys.path.insert 再导入项目模块，属有意为之
+"scripts/eval_agent_offline.py" = ["E402"]
+"scripts/smoke_agent_offline.py" = ["E402"]

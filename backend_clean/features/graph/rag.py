@@ -2,7 +2,7 @@
 
 import json
 import logging
-import re
+
 import pymysql
 
 from core.config import Config

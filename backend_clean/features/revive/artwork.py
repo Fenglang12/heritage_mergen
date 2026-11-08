@@ -73,6 +73,7 @@ def _compact_image_for_db(image_url: str) -> str:
 
 def save_user_artwork(user_id: int, prompt: str, image_url: str,
                       analysis: str = '', source: str = 'revive') -> UserArtwork | None:
+    """保存焕新作品；压缩图片并清理超出保留上限的旧作品。"""
     if not user_id or not image_url:
         return None
     try:
@@ -104,6 +105,7 @@ def save_user_artwork(user_id: int, prompt: str, image_url: str,
 
 
 def list_user_artworks(user_id: int, limit: int = 8) -> list:
+    """按时间倒序返回用户最近的焕新作品。"""
     rows = (
         UserArtwork.query.filter_by(user_id=user_id)
         .order_by(UserArtwork.created_at.desc())

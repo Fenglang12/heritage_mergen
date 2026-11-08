@@ -1,6 +1,8 @@
-import re
+"""清洗图谱原始 CSV，输出 clean_nodes.json / clean_edges.json。"""
+
 import json
 import os
+import re
 
 # ================= 配置区 =================
 INPUT_NODES = 'nodes.csv'
@@ -15,10 +17,10 @@ def read_dirty_file(file_path):
         print(f"❌ 找不到文件: {file_path}")
         return []
     try:
-        with open(file_path, 'r', encoding='utf-8-sig') as f:
+        with open(file_path, encoding='utf-8-sig') as f:
             return f.readlines()
     except UnicodeDecodeError:
-        with open(file_path, 'r', encoding='gbk', errors='ignore') as f:
+        with open(file_path, encoding='gbk', errors='ignore') as f:
             return f.readlines()
 
 
@@ -50,7 +52,7 @@ def parse_properties(prop_str):
 
 def clean_nodes(lines):
     """提取标准化节点数据"""
-    print(f"⏳ 开始清洗节点数据...")
+    print("⏳ 开始清洗节点数据...")
     nodes = []
     # 匹配模式：兼容 (:标签 {属性}) 以及畸形的 (,标签 {属性})
     # 正则解释：找括号，忽略冒号或逗号，抓取标签名，找大括号内的属性
@@ -77,7 +79,7 @@ def clean_nodes(lines):
 
 def clean_edges(lines):
     """提取标准化关系（边）数据"""
-    print(f"⏳ 开始清洗关系数据...")
+    print("⏳ 开始清洗关系数据...")
     edges = []
 
     # 匹配模式：(源节点)-[:关系]->(目标节点)
@@ -141,7 +143,7 @@ def main():
     with open(OUTPUT_EDGES, 'w', encoding='utf-8') as f:
         json.dump(clean_e, f, ensure_ascii=False, indent=2)
 
-    print(f"\n✅ 清洗完成！")
+    print("\n✅ 清洗完成！")
     print(f"📊 成功提取有效节点 (Nodes): {len(clean_n)} 个")
     print(f"🔗 成功提取有效关系 (Edges): {len(clean_e)} 条")
     print(f"📂 成果已保存至 '{OUTPUT_NODES}' 和 '{OUTPUT_EDGES}'")

@@ -3,12 +3,12 @@
 import unittest
 
 from shared.utils import (
+    _filter_pois_for_theme,
+    _poi_is_noise_for_theme,
+    _poi_matches_keyword,
+    _query_search_intent,
     format_spark_user_error,
     strip_legacy_spark_error_text,
-    _poi_matches_keyword,
-    _poi_is_noise_for_theme,
-    _filter_pois_for_theme,
-    _query_search_intent,
 )
 
 

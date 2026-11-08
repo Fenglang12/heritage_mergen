@@ -1,0 +1,4 @@
+-r requirements.txt
+
+# 开发工具：代码规范检查
+ruff>=0.17

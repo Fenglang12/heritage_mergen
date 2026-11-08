@@ -2,6 +2,8 @@
 
 import unittest
 
+from features.agent.engine import HeritageAgent
+from features.agent.memory import empty_memory
 from features.agent.parse import (
     AGENT_PATH_LABELS,
     append_grounding_block,
@@ -21,8 +23,6 @@ from features.agent.parse import (
     should_plan_study_tour,
     summarize_tool_result,
 )
-from features.agent.engine import HeritageAgent
-from features.agent.memory import empty_memory
 from features.agent.schema import format_tool_catalog, validate_tool_args
 
 

@@ -155,7 +155,7 @@ npm run build
 
 后端需配置 CORS 允许请求头 `X-Client-Public-IP`（地图 IP 定位用）。本地开发时由 `features/map/utils/clientIp.js` 获取公网 IP 并写入该头。
 
-**焕新相关：** 前端默认调用 `POST /api/generate_art/stream`（SSE），无需轮询即可看到 GLM-4V / CogView-4 阶段提示。需保证后端 `.env` 中 `ZHIPU_API_KEY` 有效；现场答辩可设后端 `DEMO_MODE=true`。
+**焕新相关：** 前端默认调用 `POST /api/generate_art/stream`（SSE），无需轮询即可看到视觉识别 / 图像生成阶段提示。需保证后端 `.env` 中 `ZHIPU_API_KEY` 有效；现场答辩可设后端 `DEMO_MODE=true`。
 
 ---
 
@@ -231,7 +231,7 @@ Agent 回答中的 Markdown 链接（如 `[打开非遗地图](/map)`）经 `sug
 | `/login` | `features/auth` | 青金深色登录/注册（品牌区：数据条、功能卡片、非遗时间轴、跑马灯；表单区：渐变描边 + 「匠」印）；逻辑见 `useAuthForm.js` |
 | `/map` | `features/map` | IP 定位非遗 POI、弹窗展示后端 `ai_intro`、路线规划；`mapStore` 消费识图结果 |
 | `/source` | `features/source` | 图片/视频识图、`VoiceInputBar` 补充描述 |
-| `/revive` | `features/revive` | 参考图 + Prompt；SSE 双阶段（🔍 GLM / 🖌️ CogView） |
+| `/revive` | `features/revive` | 参考图 + Prompt；SSE 双阶段（🔍 视觉识别 / 🖌️ 图像生成） |
 | `/chat` | `features/chat` | 多会话与标题编辑、语音、**图片上传**、Agent 焕新工具、推荐链接跳转；`mapStore` 联动地图 |
 | `/graph` | `features/graph` | 3D 力导向图谱；`el-autocomplete` 搜索节点并相机聚焦；图谱问答高亮相关节点 |
 | `/quiz` | `features/quiz` | SSE 逐题预览、连击徽章、朗读题目 |

@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import re
 from datetime import datetime
-from typing import Any
 
 from features.agent.parse import (
     extract_heritage_search_query,
@@ -113,6 +112,7 @@ def extract_open_place_keyword(user_msg: str) -> str:
 
 
 def empty_memory() -> dict:
+    """返回一份空的会话记忆结构。"""
     return {
         'goal': None,           # 如「正在做英歌舞研学」
         'goal_status': 'idle',  # idle | active | done
@@ -127,6 +127,7 @@ def empty_memory() -> dict:
 
 
 def load_memory_json(raw: str | None) -> dict:
+    """从数据库 JSON 文本恢复会话记忆；内容损坏时回退为空结构。"""
     mem = empty_memory()
     if not (raw or '').strip():
         return mem
@@ -149,6 +150,7 @@ def load_memory_json(raw: str | None) -> dict:
 
 
 def dump_memory_json(mem: dict) -> str:
+    """序列化会话记忆，并刷新 updated_at 时间戳。"""
     payload = empty_memory()
     payload.update(mem or {})
     payload['updated_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')

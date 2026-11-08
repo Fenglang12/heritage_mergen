@@ -11,13 +11,13 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from features.agent.parse import (  # noqa: E402
+from features.agent.parse import (
     append_grounding_block,
     build_soft_prior_hint,
     parse_tool_call_with_validation,
     should_plan_study_tour,
 )
-from features.agent.schema import TOOL_SCHEMAS, format_tool_catalog  # noqa: E402
+from features.agent.schema import TOOL_SCHEMAS, format_tool_catalog
 
 
 def main() -> int:

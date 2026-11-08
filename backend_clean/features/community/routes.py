@@ -3,12 +3,11 @@
 import logging
 from datetime import datetime
 
-from flask import Blueprint, request, jsonify
-from werkzeug.security import generate_password_hash
+from flask import Blueprint, jsonify, request
 
-from core.auth_utils import auth_required, admin_required, get_current_user
+from core.auth_utils import admin_required, auth_required, get_current_user
 from core.exts import db
-from core.models import User, Feedback, Checkin, CheckinComment
+from core.models import Checkin, CheckinComment, Feedback, User
 
 logger = logging.getLogger(__name__)
 

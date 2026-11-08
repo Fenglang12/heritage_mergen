@@ -4,14 +4,14 @@ import json
 import logging
 import time
 
-from flask import Blueprint, request, jsonify, Response, stream_with_context
+import pymysql
+from flask import Blueprint, Response, jsonify, request, stream_with_context
 
-from core.auth_utils import auth_required, admin_required, get_current_user_id
+from core.auth_utils import admin_required, auth_required, get_current_user_id
 from core.config import Config
 from core.exts import db
-from core.models import QuizScore, Checkin
+from core.models import Checkin, QuizScore
 from features.quiz.service import generate_quiz_questions
-import pymysql
 
 logger = logging.getLogger(__name__)
 

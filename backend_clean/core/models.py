@@ -1,4 +1,5 @@
-# models.py — 完整数据模型（含管理员、反馈、社区打卡、评论）
+"""数据模型：用户、会话、反馈、社区打卡、答题、报告与焕新作品。"""
+
 from datetime import datetime
 
 from sqlalchemy.dialects.mysql import LONGTEXT

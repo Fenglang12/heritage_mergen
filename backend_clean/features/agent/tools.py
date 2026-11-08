@@ -1,6 +1,5 @@
 """Agent 可调用的业务能力封装，复用 utils / 图谱 / 路线等既有实现。"""
 
-import json
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -9,13 +8,13 @@ from features.map.direction import plan_direction
 from shared.utils import (
     _poi_is_noise_for_theme,
     apply_marker_intros,
+    collect_markers_for_entries,
     execute_zhipu_art_generation,
     get_amap_location,
     get_client_ip_from_request,
-    get_retrieved_context,
-    collect_markers_for_entries,
     get_markers_from_amap,
     get_markers_near_lnglat,
+    get_retrieved_context,
     iter_zhipu_art_generation,
     normalize_art_result_url,
     resolve_geo_from_lnglat,
@@ -574,4 +573,5 @@ def execute_tool(tool_name: str, args: dict) -> dict:
 
 
 def tool_label(tool_name: str) -> str:
+    """返回工具的中文展示名；未注册时回退为工具名。"""
     return TOOL_REGISTRY.get(tool_name, {}).get('label', tool_name)

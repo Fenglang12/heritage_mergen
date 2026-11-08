@@ -171,7 +171,8 @@ def extract_heritage_search_query(message: str) -> str:
             m = m[:-len(suffix)].strip()
             break
     m = re.sub(r'^[的\s]+', '', m)
-    m = re.sub(r'[\s？?！!。，,、]+$', '', m).strip('「」『』""\'')
+    m = re.sub(r'[\s？?！!。，,、]+$', '', m)
+    m = re.sub(r"^[「」『』\"']+|[「」『』\"']+$", '', m)
     return (m[:30] if m else (message or '').strip()[:20]) or '非遗'
 
 

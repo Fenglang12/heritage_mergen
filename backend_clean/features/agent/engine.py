@@ -4,11 +4,23 @@ import json
 import logging
 import time
 
+from core.config import Config
+from features.agent.memory import (
+    dump_memory_json,
+    empty_memory,
+    extract_open_place_keyword,
+    format_session_memory_block,
+    load_memory_json,
+    memory_public_view,
+    message_continues_goal,
+    message_diverges_from_goal,
+    update_memory_from_turn,
+)
 from features.agent.parse import (
     AGENT_ROUTE_RULES,
     append_grounding_block,
-    build_soft_prior_hint,
     build_grounded_places_answer,
+    build_soft_prior_hint,
     enforce_suggest_path,
     extract_heritage_search_query,
     extract_place_search_args,
@@ -24,23 +36,11 @@ from features.agent.parse import (
     should_plan_study_tour,
     summarize_tool_result,
 )
-from core.config import Config
-from features.agent.memory import (
-    dump_memory_json,
-    empty_memory,
-    extract_open_place_keyword,
-    format_session_memory_block,
-    load_memory_json,
-    memory_public_view,
-    message_continues_goal,
-    message_diverges_from_goal,
-    update_memory_from_turn,
-)
 from features.agent.profile import build_user_profile, format_user_profile_block
 from features.agent.schema import format_tool_catalog
 from features.agent.tools import TOOL_REGISTRY, execute_tool, iter_revive_heritage, tool_label
-from features.revive.artwork import save_user_artwork
 from features.demo.service import get_demo_chat_reply
+from features.revive.artwork import save_user_artwork
 from shared.utils import (
     _query_search_intent,
     format_spark_user_error,

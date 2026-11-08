@@ -167,7 +167,7 @@ import { useAuthStore } from '@/features/auth/auth'
 import { ElMessageBox } from 'element-plus'
 import {
   Location, Picture, MagicStick, ChatDotRound, Share,
-  MapLocation, Promotion, Setting, Connection, SwitchButton,
+  MapLocation, Promotion, Connection, SwitchButton,
   CameraFilled, UserFilled, Tickets, DataAnalysis, Document
 } from '@element-plus/icons-vue'
 

@@ -1,3 +1,5 @@
+"""Flask 应用入口：初始化数据库、注册蓝图、创建默认管理员。"""
+
 import os
 
 os.environ.setdefault('HF_ENDPOINT', 'https://modelscope.cn')
@@ -7,6 +9,7 @@ from flask_cors import CORS
 
 from core.config import Config
 from core.exts import db
+# 模型导入是 db.create_all() 注册表结构的副作用依赖，勿删除
 from core.models import (
     User, ChatSession, ChatHistory, Feedback, Checkin,
     CheckinComment, QuizScore, StudyReport, UserArtwork,
@@ -18,6 +21,7 @@ from features.report.routes import report_bp
 
 
 def create_app():
+    """创建并配置 Flask 应用：注册蓝图、初始化数据库与默认管理员。"""
     app = Flask(__name__)
     app.config.from_object(Config)
 

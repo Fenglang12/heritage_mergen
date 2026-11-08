@@ -2,22 +2,22 @@
 
 import base64
 import io
-import uuid
+import json
 import logging
+import re
 import threading
 import time
-import re
+import uuid
 
-import requests
-from flask import Blueprint, request, jsonify, session, Response, stream_with_context, current_app
-from werkzeug.security import generate_password_hash, check_password_hash
+import pymysql
+from flask import Blueprint, Response, current_app, jsonify, request, session, stream_with_context
 from PIL import Image
+from werkzeug.security import check_password_hash, generate_password_hash
 
-from core.exts import db
-from core.models import User, ChatHistory, ChatSession
 from core.auth_utils import auth_required, get_current_user_id
-from features.graph.graph_payload import build_graph_payload
-from features.graph.rag import MySQLGraphRAG
+from core.config import Config
+from core.exts import db
+from core.models import ChatHistory, ChatSession, User
 from features.agent.engine import HeritageAgent
 from features.agent.parse import (
     enforce_suggest_path,
@@ -25,31 +25,28 @@ from features.agent.parse import (
     normalize_agent_suggest_links,
 )
 from features.agent.tools import init_agent_tools
+from features.graph.graph_payload import build_graph_payload
+from features.graph.rag import MySQLGraphRAG
 from features.map.direction import plan_direction
 from features.revive.artwork import save_user_artwork
 from shared.utils import (
-    sync_spark_call,
-    stream_chat_with_llm,
+    apply_marker_intros,
     audio_to_text,
-    understand_image,
-    understand_video,
-    get_markers_from_amap,
-    get_markers_near_lnglat,
     collect_markers_for_entries,
-    get_tts_audio,
+    execute_zhipu_art_generation,
     get_amap_location,
     get_client_ip_from_request,
-    resolve_amap_ip_location,
-    resolve_geo_from_lnglat,
-    execute_zhipu_art_generation,
+    get_markers_from_amap,
+    get_markers_near_lnglat,
+    get_tts_audio,
     iter_zhipu_art_generation,
     normalize_art_result_url,
-    apply_marker_intros,
+    resolve_geo_from_lnglat,
     strip_legacy_spark_error_text,
+    sync_spark_call,
+    understand_image,
+    understand_video,
 )
-import pymysql
-from core.config import Config
-import json
 
 logger = logging.getLogger(__name__)
 
@@ -468,8 +465,9 @@ def chat():
             asr_text = msg
         except Exception as exc:
             logger.error('语音转文字失败: %s', exc, exc_info=True)
+            error_text = f'语音识别失败：{exc}'
             def err_gen():
-                yield _sse_event({'type': 'error', 'text': f'语音识别失败：{exc}'})
+                yield _sse_event({'type': 'error', 'text': error_text})
             return Response(stream_with_context(err_gen()), mimetype='text/event-stream')
 
     if not msg and not image_b64:
@@ -575,7 +573,12 @@ def analyze_source():
     # 兼容 data:image/...;base64,XXX 格式
     img_b64 = img_raw.split(',')[1] if ',' in img_raw else img_raw
 
-    from features.demo.service import apply_simulate_delay, get_cached_source, get_demo_analyze_result, set_cached_source
+    from features.demo.service import (
+        apply_simulate_delay,
+        get_cached_source,
+        get_demo_analyze_result,
+        set_cached_source,
+    )
 
     if Config.DEMO_MODE:
         from features.demo.service import demo_simulate_working
@@ -723,7 +726,7 @@ def analyze_source_video():
     if not ai_analysis:
         return jsonify({
             'status': 'error',
-            'msg': video_err or '视频理解失败，请检查 DASHSCOPE_API_KEY 配置或重试',
+            'msg': video_err or '视频理解失败，请检查 VIDEO_API_KEY（或 DASHSCOPE_API_KEY）配置或重试',
         }), 500
 
     # 解析多条【非遗条目】，每条独立查高德，最终合并去重
@@ -1207,8 +1210,7 @@ def get_location():
     geo = resolve_geo_from_lnglat(gps_lng, gps_lat)
     if geo.get('status') == 'success' and geo.get('city'):
         return jsonify(geo)
-    # # 已注释：GPS 失败不再回退 IP
-    # ip_geo = resolve_amap_ip_location(get_client_ip_from_request(request))
+    # GPS 失败不再回退 IP
     return jsonify(geo), 400
 
 

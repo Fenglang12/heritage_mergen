@@ -1,30 +1,29 @@
-# utils.py
-# 修复：
-#   1. 删除所有注释掉的废弃代码
-#   2. 删除 get_retrieved_context 中重复的、永不执行的 debug 代码块
-#   3. 删除 stream_chat_with_llm 中调试用的 print，改为 logging
-#   4. get_markers_from_amap 支持 heritage_keyword 参数，加 citylimit 强制限城
+"""共享工具层。
 
+按职责分为：星火对话/语音、图像与视频理解、高德地图检索、
+知识图谱 RAG、数字焕新（视觉识别 + 文生图）等。
+"""
+
+import _thread as thread
 import base64
-import json
-import re
 import hashlib
 import hmac
-import ssl
-import ipaddress
-import os
-import requests
-import uuid
-import queue
-import _thread as thread
-import logging
-import time
 import io
+import ipaddress
+import json
+import logging
+import os
+import queue
+import re
+import ssl
+import time
+import uuid
 from datetime import datetime
 from time import mktime
-from urllib.parse import urlparse, urlencode
+from urllib.parse import urlencode, urlparse
 from wsgiref.handlers import format_date_time
 
+import requests
 import websocket
 
 from core.config import Config
@@ -40,6 +39,7 @@ _rag_instance = None
 # ================================================================
 
 def create_auth_url(request_url, api_key, api_secret, path):
+    """生成讯飞 WebSocket 接口的 HMAC-SHA256 鉴权 URL。"""
     url    = urlparse(request_url)
     date   = format_date_time(mktime(datetime.now().timetuple()))
     sig_origin = f'host: {url.netloc}\ndate: {date}\nGET {path} HTTP/1.1'
@@ -387,8 +387,7 @@ def stream_chat_with_llm(context):
     text, err = _spark_chat_once(context, temperature=0.5, max_tokens=2048)
     if err:
         return
-    for char in text or '':
-        yield char
+    yield from (text or '')
 
 
 # ================================================================
@@ -683,6 +682,16 @@ def apply_marker_intros(markers: list, city: str = None) -> None:
 # 5. 图像识别（带自定义 Prompt）
 # ================================================================
 
+def strip_thinking_text(text: str) -> str:
+    """移除视觉/推理模型输出中的 <think> 思考段与 <answer> 包装标签。"""
+    if not text:
+        return ''
+    cleaned = re.sub(r'<think\b[^>]*>.*?</think\s*>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    cleaned = re.sub(r'<think\b[^>]*>.*$', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
+    cleaned = re.sub(r'</?answer\b[^>]*>', '', cleaned, flags=re.IGNORECASE)
+    return cleaned.strip()
+
+
 def understand_image(img_b64, prompt):
     """讯飞图像理解。成功返回文本；失败返回带【原始错误】前缀的说明（便于前端/日志排查）。"""
     result = {'text': '', 'error': None}
@@ -724,7 +733,7 @@ def understand_image(img_b64, prompt):
     ws.run_forever(sslopt={'cert_reqs': ssl.CERT_NONE})
     if result['error'] and not result['text']:
         return f'【识图失败】【原始错误】{result["error"]}'
-    return result['text']
+    return strip_thinking_text(result['text'])
 
 
 def understand_video(video_b64: str, prompt: str, mime_type: str = 'video/mp4') -> tuple[str, str]:
@@ -739,49 +748,52 @@ def understand_video(video_b64: str, prompt: str, mime_type: str = 'video/mp4') 
         logger.error('openai 包未安装，请执行 pip install openai')
         return '', '服务端未安装 openai 依赖，请执行 pip install openai'
 
-    api_key = _dashscope_api_key()
+    api_key = (Config.VIDEO_API_KEY or _dashscope_api_key()).strip()
     if not api_key:
-        logger.error('DASHSCOPE_API_KEY 未配置或无效')
+        logger.error('VIDEO_API_KEY / DASHSCOPE_API_KEY 未配置或无效')
         return '', (
-            'DASHSCOPE_API_KEY 未配置。请在 backend_clean/.env 中设置百炼控制台创建的 API Key'
+            '视频理解 API Key 未配置。请在 backend_clean/.env 中设置 VIDEO_API_KEY'
+            '（或 DASHSCOPE_API_KEY）'
         )
 
+    base_url = (Config.VIDEO_BASE_URL or Config.DASHSCOPE_BASE_URL).strip()
     client = OpenAI(
         api_key=api_key,
-        base_url=Config.DASHSCOPE_BASE_URL,
+        base_url=base_url,
     )
 
     try:
+        video_part = {
+            'type': 'video_url',
+            'video_url': {'url': f'data:{mime_type};base64,{video_b64}'},
+        }
+        # fps 是百炼 Qwen-VL 的采样参数；智谱等 OpenAI 兼容服务不需要
+        if 'dashscope' in base_url:
+            video_part['fps'] = 2
+
         completion = client.chat.completions.create(
             model=Config.VIDEO_MODEL,
             messages=[
                 {
                     'role': 'user',
-                    'content': [
-                        {
-                            'type': 'video_url',
-                            'video_url': {'url': f'data:{mime_type};base64,{video_b64}'},
-                            'fps': 2,
-                        },
-                        {'type': 'text', 'text': prompt},
-                    ],
+                    'content': [video_part, {'type': 'text', 'text': prompt}],
                 }
             ],
         )
-        text = (completion.choices[0].message.content or '').strip()
+        text = strip_thinking_text(completion.choices[0].message.content or '')
         if not text:
-            return '', '百炼返回内容为空，请换较短视频重试'
+            return '', '模型返回内容为空，请换较短视频重试'
         return text, ''
     except Exception as e:
         logger.error('understand_video 调用失败: %s', e)
         err = str(e)
         if '401' in err or 'invalid_api_key' in err.lower() or 'Incorrect API key' in err:
             return '', (
-                '百炼 API Key 无效（401）。请在阿里云 DashScope 控制台确认 Key 是否启用、'
-                '是否复制完整，或重新创建后更新 backend_clean/.env 中的 DASHSCOPE_API_KEY'
+                '视频理解 API Key 无效（401）。请确认 backend_clean/.env 中的 '
+                'VIDEO_API_KEY（或 DASHSCOPE_API_KEY）是否启用、复制完整。'
             )
         if '429' in err:
-            return '', '百炼请求过于频繁（429），请稍后再试'
+            return '', '视频理解请求过于频繁（429），请稍后再试'
         return '', f'视频理解调用失败：{err[:240]}'
 
 
@@ -1027,7 +1039,7 @@ def _amap_around_search(lng, lat, keywords: str, radius: int = 5000, offset: int
 
 def _haversine_m(lng1, lat1, lng2, lat2) -> float:
     """两点球面距离（米）。"""
-    from math import radians, sin, cos, asin, sqrt
+    from math import asin, cos, radians, sin, sqrt
     try:
         lon1, la1, lon2, la2 = map(float, (lng1, lat1, lng2, lat2))
     except (TypeError, ValueError):
@@ -1637,6 +1649,7 @@ def resolve_amap_ip_location(client_ip=None):
 
 
 def get_amap_location(client_ip=None):
+    """兼容旧接口：仅返回 IP 定位得到的城市名。"""
     return resolve_amap_ip_location(client_ip)['city']
 
 
@@ -1645,6 +1658,7 @@ def get_amap_location(client_ip=None):
 # ================================================================
 
 def get_tts_audio(text):
+    """调用讯飞 TTS 合成语音，返回音频字节数据。"""
     print(f'[TTS] 开始合成，文本长度={len(text)}，前50字: {text[:50]}', flush=True)
     q = queue.Queue()
     done = [False]
@@ -1771,7 +1785,7 @@ def _zhipu_describe_image(b64_img):
             ]
         }],
         "temperature": 0.3,
-        "max_tokens": 512
+        "max_tokens": 2048
     }
 
     try:
@@ -1782,8 +1796,9 @@ def _zhipu_describe_image(b64_img):
             logger.error("GLM-4V 图像分析失败: %s", err_msg)
             return ""
         content = resp_json.get("choices", [{}])[0].get("message", {}).get("content", "")
-        logger.info("GLM-4V 参考图分析完成，长度 %d", len(content))
-        return content.strip()
+        content = strip_thinking_text(content)
+        logger.info("视觉模型参考图分析完成，长度 %d", len(content))
+        return content
     except Exception as e:
         logger.warning("GLM-4V 图像分析异常: %s", e)
         return ""
@@ -1876,8 +1891,8 @@ def iter_zhipu_art_generation(prompt, b64_img=None):
     combined_prompt = prompt
 
     if b64_img:
-        yield {'type': 'progress', 'stage': 'glm_start', 'text': 'GLM-4V 正在分析参考图中的非遗文化元素…'}
-        logger.info('检测到参考图，调用 GLM-4V 分析图像特征...')
+        yield {'type': 'progress', 'stage': 'glm_start', 'text': '视觉模型正在分析参考图中的非遗文化元素…'}
+        logger.info('检测到参考图，调用视觉模型分析图像特征...')
         img_desc = _zhipu_describe_image(b64_img)
         if img_desc:
             excerpt = img_desc if len(img_desc) <= 100 else img_desc[:100] + '…'
@@ -1896,9 +1911,9 @@ def iter_zhipu_art_generation(prompt, b64_img=None):
         else:
             yield {'type': 'progress', 'stage': 'glm_skip', 'text': '参考图分析未完成，将仅按文字创意生成'}
     else:
-        yield {'type': 'progress', 'stage': 'text_only', 'text': '未提供参考图，CogView-4 将按文字创意直接生成'}
+        yield {'type': 'progress', 'stage': 'text_only', 'text': '未提供参考图，图像模型将按文字创意直接生成'}
 
-    yield {'type': 'progress', 'stage': 'cogview_start', 'text': 'CogView-4 正在绘制焕新艺术品…'}
+    yield {'type': 'progress', 'stage': 'cogview_start', 'text': '图像模型正在绘制焕新艺术品…'}
 
     model = Config.ZHIPU_IMAGE_MODEL
     quality = 'hd' if len(combined_prompt.strip()) > 60 else 'standard'
@@ -1970,6 +1985,7 @@ def execute_zhipu_art_generation(prompt, b64_img=None, on_progress=None):
 # ================================================================
 
 def get_retrieved_context(query):
+    """向量 RAG 检索：返回与 query 相关的非遗百科上下文文本。"""
     global _rag_instance
     try:
         if _rag_instance is None:

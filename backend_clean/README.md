@@ -129,6 +129,14 @@ python app.py
 # http://localhost:5000
 ```
 
+代码规范检查（开发可选）：
+
+```bash
+cd backend_clean
+pip install -r requirements-dev.txt
+ruff check .
+```
+
 **数据准备（首次）：**
 
 ```bash
@@ -157,13 +165,15 @@ python app.py
 | `DB_*` | MySQL（默认库名 `heritage_db`） |
 | `SPARK_*` | 讯飞星火对话 / Text2SQL / 出题 / 报告 |
 | `XFYUN_*` | 语音识别 IAT、语音合成 TTS（若已配置） |
-| `ZHIPU_API_KEY` | **焕新必填**：GLM-4V 识图 + CogView-4 生图 |
-| `ZHIPU_IMAGE_MODEL` | 推荐 `cogview-4-250304` |
-| `ZHIPU_VISION_MODEL` | 推荐 `glm-4v` |
+| `ZHIPU_API_KEY` | **焕新/视频识图必填**：GLM-4.1V-Thinking-Flash 识图 + CogView-3-Flash 生图（当前免费） |
+| `ZHIPU_IMAGE_MODEL` | 推荐 `cogview-3-flash`（免费） |
+| `ZHIPU_VISION_MODEL` | 推荐 `glm-4.1v-thinking-flash`（免费，支持图片/视频） |
 | `AMAP_API_KEY` | IP 定位、POI、路线 |
-| `DASHSCOPE_API_KEY` | 百炼 API（视频识图；`MARKER_INTRO_PROVIDER=qwen` 时用于地图标点简介） |
-| `DASHSCOPE_BASE_URL` | 默认 `https://dashscope.aliyuncs.com/compatible-mode/v1` |
-| `VIDEO_MODEL` | 视频理解模型，默认 `qwen-vl-plus` |
+| `VIDEO_BASE_URL` | 视频识图通道地址（当前 `https://open.bigmodel.cn/api/paas/v4`；留空回落到百炼） |
+| `VIDEO_API_KEY` | 视频识图通道密钥（当前复用智谱 Key；留空回落到 `DASHSCOPE_API_KEY`） |
+| `VIDEO_MODEL` | 视频理解模型，当前默认 `glm-4.1v-thinking-flash` |
+| `DASHSCOPE_API_KEY` | 百炼备用视频通道；`MARKER_INTRO_PROVIDER=qwen` 时用于地图标点简介 |
+| `DASHSCOPE_BASE_URL` | 百炼兼容接口，默认 `https://dashscope.aliyuncs.com/compatible-mode/v1` |
 | `QWEN_INTRO_MODEL` | 标点简介用 Qwen 模型，默认 `qwen3-max` |
 | `MARKER_INTRO_PROVIDER` | `spark`（默认，复用 `SPARK_*`）或 `qwen` |
 | `SOURCE_TRACE_MAX_MARKERS` | 识图 / 视频溯源返回地标数上限，默认 `10` |
@@ -215,7 +225,7 @@ python app.py
 | `user_id` | INT FK | 用户 |
 | `prompt` | VARCHAR(500) | 创意描述 |
 | `image_data` | **LONGTEXT** | base64 data URL（入库前会压缩为 JPEG 预览图） |
-| `analysis` | LONGTEXT | GLM-4V 分析摘要 |
+| `analysis` | LONGTEXT | 视觉模型分析摘要 |
 | `source` | VARCHAR(20) | `revive` / `agent` |
 | `created_at` | DATETIME | 创建时间 |
 
@@ -284,9 +294,9 @@ python app.py
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | `/analyze_source` | 图片识图；可选 `voice_hint`；`markers` 最多 `SOURCE_TRACE_MAX_MARKERS` 条 |
-| POST | `/analyze_source_video` | 视频识图（百炼视频模型）；地标数量同上 |
+| POST | `/analyze_source_video` | 视频识图（默认智谱 GLM-4.1V-Thinking-Flash，可切百炼）；地标数量同上 |
 | POST | `/generate_art` | 异步生图，返回 `task_id` |
-| POST | `/generate_art/stream` | **SSE** 推送 GLM-4V → CogView-4 阶段进度 |
+| POST | `/generate_art/stream` | **SSE** 推送视觉识别 → 图像生成阶段进度 |
 | GET | `/query_art/<task_id>` | 轮询异步生图结果 |
 
 ### 图谱与地图
@@ -330,7 +340,7 @@ python app.py
 | `search_places` | 高德 POI |
 | `plan_route` | 路线规划 |
 | `identify_image` | 图片识图（请求带 `image` 时） |
-| `revive_heritage` | GLM-4V + CogView-4 焕新（对话内出图） |
+| `revive_heritage` | GLM-4.1V-Thinking-Flash + CogView-3-Flash 焕新（对话内出图） |
 
 ### `POST /api/chat` SSE 事件
 
@@ -380,7 +390,7 @@ python app.py
    └────┬────┘
     YES │     NO
         ▼     ▼
-   GLM-4V 分析 ──→ CogView-4 文生图
+   GLM-4.1V-Thinking-Flash 分析 ──→ CogView-3-Flash 文生图
         │
         ▼
    外链转 data URL（normalize_art_result_url）
@@ -389,7 +399,7 @@ python app.py
    可选写入 user_artworks（供研学报告创作集）
 ```
 
-实现入口：`shared/utils.py` 的 `iter_zhipu_art_generation()`；路由在 `api/routes.py`。CogView 请求体含 `watermark_enabled: false`（需在智谱开放平台签署去水印免责声明）。
+实现入口：`shared/utils.py` 的 `iter_zhipu_art_generation()`；路由在 `api/routes.py`。图像模型请求体含 `watermark_enabled: false`（需在智谱开放平台签署去水印免责声明）。
 
 ### 焕新 SSE（`/api/generate_art/stream`）
 
@@ -413,13 +423,21 @@ python app.py
 
 ---
 
-## 单元测试
+## 单元测试与代码规范
 
-不依赖讯飞 API 的解析逻辑：
+单元测试不依赖讯飞/智谱外网：
 
 ```bash
 cd backend_clean
-python -m unittest discover -s tests -v
+python -m unittest discover -s tests -t . -v
+```
+
+代码规范检查（ruff，配置见 `backend_clean/pyproject.toml`）：
+
+```bash
+cd backend_clean
+pip install -r requirements-dev.txt
+ruff check .
 ```
 
 覆盖：`features/agent/parse.py`（含 `normalize_agent_suggest_links`、`infer_suggest_path`、`enforce_suggest_path`）、`features/graph/nodes.py`、`tests/test_agent_engine.py`（推荐路径场景）。
@@ -428,7 +446,7 @@ python -m unittest discover -s tests -v
 
 ## 智谱 API 常见问题
 
-焕新或 GLM-4V 报 **「IP 地址没有接口访问权限」** 时，请在 [智谱开放平台](https://open.bigmodel.cn/) 检查 API Key 的 **IP 白名单**，或关闭 IP 限制 / 更换网络。答辩现场可设 `DEMO_MODE=true` 使用预置焕新图。
+焕新或视觉模型报 **「IP 地址没有接口访问权限」** 时，请在 [智谱开放平台](https://open.bigmodel.cn/) 检查 API Key 的 **IP 白名单**，或关闭 IP 限制 / 更换网络。答辩现场可设 `DEMO_MODE=true` 使用预置焕新图。
 
 ---
 

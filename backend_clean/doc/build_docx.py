@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """直接生成三份答辩 Word 文档（内容与 heritage_mergen 代码库一致）。"""
 
 from pathlib import Path

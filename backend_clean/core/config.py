@@ -1,5 +1,5 @@
-# config.py
-# 所有敏感凭证只从 backend_clean/.env 读取，本文件不写真实密钥。
+"""应用配置：统一从 backend_clean/.env 读取，不在代码中硬编码密钥。"""
+
 import os
 from pathlib import Path
 
@@ -52,6 +52,9 @@ class Config:
         'https://dashscope.aliyuncs.com/compatible-mode/v1',
     )
     VIDEO_MODEL = _env('VIDEO_MODEL', 'qwen-vl-plus')
+    # 视频理解专用通道：可指向智谱等 OpenAI 兼容服务；留空则回落到百炼
+    VIDEO_BASE_URL = _env('VIDEO_BASE_URL')
+    VIDEO_API_KEY = _env('VIDEO_API_KEY')
     QWEN_INTRO_MODEL = _env('QWEN_INTRO_MODEL', 'qwen3-max')
     _marker_provider = _env('MARKER_INTRO_PROVIDER', 'spark').lower()
     if _marker_provider in ('qwen3', 'qwen-max', 'dashscope'):

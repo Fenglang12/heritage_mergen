@@ -1,9 +1,9 @@
-# build_rag_db.py
+"""构建本地 Chroma 向量库（首次运行会自动下载嵌入模型）。"""
+
 import re
-import os
-from langchain_community.document_loaders import TextLoader
-from langchain_core.documents import Document
+
 from langchain_community.vectorstores import Chroma
+from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 
 
@@ -15,11 +15,11 @@ def clean_and_transform_data(file_path):
     content = ""
     try:
         # 先尝试带有 BOM 头的 UTF-8 编码读取
-        with open(file_path, 'r', encoding='utf-8-sig') as f:
+        with open(file_path, encoding='utf-8-sig') as f:
             content = f.read()
     except UnicodeDecodeError:
         # 如果报错，说明是 Windows 默认的 GBK/ANSI 编码
-        with open(file_path, 'r', encoding='gbk', errors='ignore') as f:
+        with open(file_path, encoding='gbk', errors='ignore') as f:
             content = f.read()
 
     documents = []
@@ -69,11 +69,11 @@ def build_vector_db():
     # 持久化目录设为项目下的 chroma_db 文件夹
     persist_directory = "./chroma_db"
 
-    # 构建数据库
-    vectordb = Chroma.from_documents(
+    # 构建并持久化数据库（from_documents 会写入 persist_directory）
+    Chroma.from_documents(
         documents=final_docs,
         embedding=embeddings,
-        persist_directory=persist_directory
+        persist_directory=persist_directory,
     )
 
     print(f"\n✅ 数据库构建完成！所有知识已永久保存在 {persist_directory} 目录中。")

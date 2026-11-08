@@ -236,6 +236,7 @@ def get_cached_report(user_id: int):
 
 
 def save_report(user_id: int, payload: dict) -> StudyReport:
+    """持久化研学报告；入库前剥离体积较大的创作集图片。"""
     stored = strip_report_for_storage(payload)
     row = StudyReport(
         user_id=user_id,

@@ -12,7 +12,7 @@
 - **星火 Agent**：多步工具对话（识图 / 图谱 / 地图 / 焕新 / 百科检索）
 - **知识图谱**：Text2SQL + Three.js 3D 可视化
 - **非遗识图溯源**：图片 / 视频，地标数量可配置
-- **数字焕新**：智谱 GLM-4V + CogView-4
+- **数字焕新**：智谱 GLM-4.1V-Thinking-Flash + CogView-3-Flash（免费）
 - **地图路线**：浏览器定位、POI 标点简介、全程规划
 - **闯关答题**、**研学报告**、**社区打卡**与管理后台
 
@@ -86,11 +86,12 @@ npm run dev
 |------|------|
 | `DB_*` | MySQL |
 | `SPARK_*` | 讯飞星火（Agent / 图谱 Text2SQL / 出题 / 报告 / 地图标点简介默认通道） |
-| `ZHIPU_API_KEY` | 非遗焕新：GLM-4V + CogView-4（需在智谱控制台配置 IP 白名单） |
+| `ZHIPU_API_KEY` | 非遗焕新 / 视频识图：GLM-4.1V-Thinking-Flash + CogView-3-Flash（当前免费） |
 | `AMAP_API_KEY` | 地图定位、POI、路线 |
 | `MARKER_INTRO_PROVIDER` | 地图标点弹窗简介：`spark`（默认）或 `qwen`（需 `DASHSCOPE_API_KEY`） |
 | `SOURCE_TRACE_MAX_MARKERS` | 识图 / 视频溯源合并地标上限（默认 `10`） |
-| `DASHSCOPE_*` | 视频识图（可选）；标点简介走 `qwen` 时必填 |
+| `VIDEO_*` | 视频识图通道（当前默认智谱 `glm-4.1v-thinking-flash`；留空回落到百炼） |
+| `DASHSCOPE_*` | 百炼备用通道；标点简介走 `qwen` 时必填 |
 | `DEMO_MODE=true` | 答辩演示：焕新 / 识图 / Agent 走预置数据 |
 
 完整说明见 [`backend_clean/.env.example`](backend_clean/.env.example)。

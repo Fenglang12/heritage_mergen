@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def ensure_chat_session_memory_schema():
+    """为已有 chat_sessions 表补齐 memory_json 列（幂等，失败仅告警）。"""
     try:
         insp = inspect(db.engine)
         if 'chat_sessions' not in insp.get_table_names():

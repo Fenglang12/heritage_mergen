@@ -401,7 +401,7 @@ import { ref, computed, onMounted, watch, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useMapStore } from '@/features/map/stores/mapStore'
-import { getDefaultLocal, searchMapMarkers, fetchTtsPcm } from '@/api'
+import { getDefaultLocal, searchMapMarkers } from '@/api'
 import { getBrowserPreciseLocation } from '@/features/map/utils/browserGps'
 import HeritageLoadingPanel from '@/features/shared/components/HeritageLoadingPanel.vue'
 import {
