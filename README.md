@@ -1,7 +1,7 @@
 # 时空匠影 · 非遗研学工作站
 
-> 深圳理工大学 AI Agent 大赛 · 非遗研学工作站决赛作品  
-> 前后端分离：`backend_clean`（Flask API）+ `vue-ep-frontend`（Vue 3）
+
+前后端分离：`backend_clean`（Flask API）+ `vue-ep-frontend`（Vue 3）
 
 ---
 
