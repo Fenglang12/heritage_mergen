@@ -5,7 +5,7 @@
     <div class="session-rail">
       <div class="rail-header">
         <span class="rail-title">对话记录</span>
-        <el-button size="small" circle @click="createNewSession" :loading="creatingSession">
+        <el-button size="small" circle class="dark-tool-btn" @click="createNewSession" :loading="creatingSession">
           <el-icon><Plus /></el-icon>
         </el-button>
       </div>
@@ -59,7 +59,7 @@
         <!-- 欢迎语 -->
         <div v-if="!messages.length && !currentSessionId" class="welcome-screen">
           <div class="welcome-icon" aria-hidden="true">遗</div>
-          <h3>非遗星火向导</h3>
+          <h3>非遗智能向导</h3>
           <p>可问非遗百科、地标与图谱，支持文字和语音。</p>
           <p style="margin-top:8px;">请先在左侧 <strong style="color:var(--color-accent-teal)">新建对话</strong>。</p>
         </div>
@@ -81,7 +81,8 @@
             <div class="msg-avatar ai-avatar-icon" aria-hidden="true">遗</div>
             <div class="msg-content">
               <div class="msg-bubble ai-bubble">
-                <div v-html="renderAgentMessageHtml(msg.content)"></div>
+                <!-- AI 正文经 renderAgentMessageHtml：Markdown → HTML 后 v-html 注入 -->
+                <div class="md-body" v-html="renderAgentMessageHtml(msg.content)"></div>
                 <img v-if="msg.imageUrl" :src="msg.imageUrl" class="msg-art-img" alt="焕新作品" />
               </div>
               <div class="msg-actions" v-if="idx === messages.length - 1 && !streamingText">
@@ -106,7 +107,7 @@
         <div v-if="streamingText !== null" class="message ai-msg">
           <div class="msg-avatar ai-avatar-icon" aria-hidden="true">遗</div>
           <div class="msg-bubble ai-bubble streaming-bubble">
-            <span v-html="renderAgentMessageHtml(streamingText)"></span>
+            <div class="md-body" v-html="renderAgentMessageHtml(streamingText)"></div>
             <img v-if="streamArtUrl" :src="streamArtUrl" class="msg-art-img" alt="焕新作品" />
             <span class="typing-cursor" v-if="!streamingText"></span>
           </div>
@@ -138,13 +139,13 @@
             :type="isRecording ? 'danger' : ''"
             @mousedown="startRecording" @mouseup="stopRecording"
             @touchstart.prevent="startRecording" @touchend.prevent="stopRecording"
-            class="record-btn"
+            class="record-btn dark-tool-btn"
           >
             <el-icon><Microphone /></el-icon>
             {{ isRecording ? '松开结束录音' : '按住说话' }}
           </el-button>
           <input ref="imageInputRef" type="file" accept="image/*" class="hidden-file" @change="onImagePicked" />
-          <el-button size="small" @click="imageInputRef?.click()">
+          <el-button size="small" class="dark-tool-btn" @click="imageInputRef?.click()">
             <el-icon><Picture /></el-icon>
             {{ pendingImageB64 ? '已选图' : '图片' }}
           </el-button>
@@ -814,6 +815,19 @@ function onMessagesClick(e) {
 
 .toolbar-row { display: flex; align-items: center; gap: 10px; }
 .record-btn { letter-spacing: 1px; }
+.dark-tool-btn:not(.el-button--danger) {
+  --el-button-bg-color: #22262f;
+  --el-button-border-color: #3a4258;
+  --el-button-text-color: #a8b0c4;
+  background: #22262f !important;
+  border-color: #3a4258 !important;
+  color: #a8b0c4 !important;
+}
+.dark-tool-btn:not(.el-button--danger):hover {
+  background: rgba(61, 158, 140, 0.14) !important;
+  border-color: rgba(61, 158, 140, 0.5) !important;
+  color: #3d9e8c !important;
+}
 .hidden-file { display: none; }
 .msg-art-img, .msg-user-img {
   max-width: 100%;
@@ -826,5 +840,55 @@ function onMessagesClick(e) {
   color: var(--color-accent-teal);
   text-decoration: underline;
   cursor: pointer;
+}
+
+/* Markdown 渲染样式（.md-body 内为 marked 生成的 HTML） */
+:deep(.md-body) {
+  word-break: break-word;
+}
+:deep(.md-body > *:first-child) { margin-top: 0; }
+:deep(.md-body > *:last-child) { margin-bottom: 0; }
+:deep(.md-body p) {
+  margin: 0 0 0.55em;
+}
+:deep(.md-body p:last-child) { margin-bottom: 0; }
+:deep(.md-body strong) {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+:deep(.md-body hr) {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 0.75em 0;
+}
+:deep(.md-body ul),
+:deep(.md-body ol) {
+  margin: 0.35em 0 0.55em;
+  padding-left: 1.25em;
+}
+:deep(.md-body li) {
+  margin: 0.2em 0;
+}
+:deep(.md-body code) {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.92em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.28);
+}
+:deep(.md-body pre) {
+  margin: 0.5em 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--color-border);
+}
+:deep(.md-body pre code) {
+  padding: 0;
+  background: transparent;
+}
+:deep(.md-body a) {
+  color: var(--color-accent-teal);
 }
 </style>

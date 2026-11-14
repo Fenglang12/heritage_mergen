@@ -6,7 +6,6 @@
         <el-icon class="panel-icon"><Location /></el-icon>
         <div>
           <h2 class="panel-title">周边非遗地图</h2>
-          <p class="panel-sub">仅浏览器精确位置（已关闭 IP 定位）</p>
         </div>
       </div>
 
@@ -70,7 +69,7 @@
       <div class="ai-block" v-if="aiText">
         <div class="ai-header">
           <span class="ai-avatar" aria-hidden="true">遗</span>
-          <span class="ai-name">非遗星火向导</span>
+          <span class="ai-name">非遗智能向导</span>
         </div>
         <p class="ai-content">{{ aiText }}</p>
       </div>

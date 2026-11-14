@@ -150,7 +150,7 @@
               <div class="result-header">
                 <span class="rh-avatar" aria-hidden="true">遗</span>
                 <span class="rh-title">
-                  非遗星火向导 · {{ mode === 'video' ? '视频分析报告' : '识别报告' }}
+                  非遗智能向导 · {{ mode === 'video' ? '视频分析报告' : '识别报告' }}
                 </span>
                 <el-tag size="small" style="margin-left:auto;">{{ identifiedCity }}</el-tag>
               </div>
@@ -219,6 +219,7 @@ function switchMode(m) {
   aiText.value         = ''
   markers.value        = []
   identifiedCity.value = ''
+  voiceHint.value      = ''
 }
 
 // ── 图片状态 ──────────────────────────
@@ -226,6 +227,8 @@ const imageB64        = ref('')
 const imagePreviewUrl = ref('')
 
 function onImageChange(file) {
+  // 换图后旧语音补充不再适用，避免误当作提示词带入下一次识别
+  voiceHint.value = ''
   const reader = new FileReader()
   reader.onload = (e) => {
     imagePreviewUrl.value = e.target.result

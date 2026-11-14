@@ -30,10 +30,12 @@ from features.graph.rag import MySQLGraphRAG
 from features.map.direction import plan_direction
 from features.revive.artwork import save_user_artwork
 from shared.utils import (
+    SOURCE_TRACE_PROMPT,
     apply_marker_intros,
     audio_to_text,
     collect_markers_for_entries,
     execute_zhipu_art_generation,
+    format_heritage_source_report,
     get_amap_location,
     get_client_ip_from_request,
     get_markers_from_amap,
@@ -43,7 +45,7 @@ from shared.utils import (
     normalize_art_result_url,
     resolve_geo_from_lnglat,
     strip_legacy_spark_error_text,
-    sync_spark_call,
+    sync_llm_call,
     understand_image,
     understand_video,
 )
@@ -109,7 +111,7 @@ def _cleanup_tasks():
 threading.Thread(target=_cleanup_tasks, daemon=True).start()
 
 # ── 全局 RAG 引擎（启动时初始化一次）──────────────────────────────
-graph_engine = MySQLGraphRAG(sync_spark_call)
+graph_engine = MySQLGraphRAG(sync_llm_call)
 
 
 def _sse_event(payload: dict) -> str:
@@ -606,31 +608,20 @@ def analyze_source():
         return jsonify(cached)
 
     voice_hint = (data.get('voice_hint') or '').strip()
-    prompt = (
-        '请识别图片中的地点和非遗内容。\n'
-        '图片可能涉及多个城市、多个非遗项目，请逐一列出，每项占一行，格式如下：\n'
-        '【非遗条目】：XX省XX市 | 非遗项目名称\n'
-        '注意：城市必须精确到市级，若无法确定具体市请写该省省会城市。\n'
-        '例如广东非遗应区分：粤剧→广州市，英歌舞→汕头市，醒狮→佛山市\n'
-        '示例输出（仅供参考格式）：\n'
-        '【非遗条目】：广州市 | 粤剧\n'
-        '【非遗条目】：汕头市 | 英歌舞\n'
-        '【非遗条目】：苏州市 | 苏绣\n'
-        '最后一行：用一句话生动描述该图片所呈现的非遗文化特色。\n'
-        '注意：只输出上述格式，不要多余文字。'
-    )
+    prompt = SOURCE_TRACE_PROMPT
     if voice_hint:
-        prompt += f'\n用户语音补充说明：{voice_hint}'
-    ai_analysis = understand_image(img_b64, prompt) or ''
-    if ai_analysis.startswith('【识图失败】'):
+        prompt += f'\n用户补充说明：{voice_hint}'
+    ai_raw = understand_image(img_b64, prompt) or ''
+    if ai_raw.startswith('【识图失败】'):
         return jsonify({
             'status': 'error',
-            'msg': ai_analysis,
-            'ai_text': ai_analysis,
+            'msg': ai_raw,
+            'ai_text': ai_raw,
             'markers': [],
             'city': '',
         }), 502
 
+    ai_analysis = format_heritage_source_report(ai_raw)
     entries = []
     for line in ai_analysis.split('\n'):
         line = line.strip()
@@ -649,9 +640,9 @@ def analyze_source():
             'status': 'error',
             'msg': (
                 '识图未解析出【非遗条目】城市/项目，已取消默认北京以免地点错误。'
-                f'模型原文：{ai_analysis[:400] or "（空）"}'
+                f'模型原文：{(ai_raw or ai_analysis)[:400] or "（空）"}'
             ),
-            'ai_text': ai_analysis,
+            'ai_text': ai_analysis or ai_raw,
             'markers': [],
             'city': '',
         }), 422
@@ -667,7 +658,7 @@ def analyze_source():
         if sess and sess.user_id == user_id:
             db.session.add(ChatHistory(session_id=session_id, role='user', content='[发送了一张图片用于溯源]'))
             db.session.add(ChatHistory(session_id=session_id, role='assistant',
-                                       content=f'【图片分析结果】\n{ai_analysis}'))
+                                           content=f'【图片分析结果】\n{ai_analysis}'))
             db.session.commit()
 
     payload = {'status': 'success', 'ai_text': ai_analysis, 'markers': markers, 'city': target_city}
@@ -709,26 +700,16 @@ def analyze_source_video():
         ai_analysis, markers, target_city = get_demo_analyze_result()
         return jsonify({'status': 'success', 'ai_text': ai_analysis, 'markers': markers, 'city': target_city})
 
-    prompt = (
-        '请识别视频中出现的所有地点和非遗内容。\n'
-        '视频可能涉及多个城市、多个非遗项目，请逐一列出，每项占一行，格式如下：\n'
-        '【非遗条目】：XX省XX市 | 非遗项目名称\n'
-        '注意：城市必须精确到市级，若无法确定具体市请写该省省会城市。\n'
-        '例如：\n'
-        '【非遗条目】：广东省广州市 | 粤剧\n'
-        '【非遗条目】：广东省汕头市 | 英歌舞\n'
-        '最后一行：用一句话生动描述该视频所呈现的非遗文化特色。\n'
-        '注意：只输出上述格式，不要多余文字。'
-    )
+    prompt = SOURCE_TRACE_PROMPT
+    ai_raw, video_err = understand_video(video_b64, prompt, mime_type)
 
-    ai_analysis, video_err = understand_video(video_b64, prompt, mime_type)
-
-    if not ai_analysis:
+    if not ai_raw:
         return jsonify({
             'status': 'error',
             'msg': video_err or '视频理解失败，请检查 VIDEO_API_KEY（或 DASHSCOPE_API_KEY）配置或重试',
         }), 500
 
+    ai_analysis = format_heritage_source_report(ai_raw)
     # 解析多条【非遗条目】，每条独立查高德，最终合并去重
     entries = []   # [(city, keyword), ...]
     for line in ai_analysis.split('\n'):
@@ -743,13 +724,20 @@ def analyze_source_video():
             kw   = kw_raw.strip()[:10] or None
             entries.append((city, kw))
 
-    # 兜底：模型没输出条目时，用通用词搜一次
     if not entries:
-        entries = [('广州市', None)]
+        return jsonify({
+            'status': 'error',
+            'msg': (
+                '视频未解析出【非遗条目】城市/项目。'
+                f'模型原文：{(ai_raw or "")[:400] or "（空）"}'
+            ),
+            'ai_text': ai_analysis or ai_raw,
+            'markers': [],
+            'city': '',
+        }), 422
 
     markers = collect_markers_for_entries(entries)
-    # 返回给前端展示的代表城市（取第一条）
-    target_city = entries[0][0] if entries else '广州市'
+    target_city = entries[0][0]
     apply_marker_intros(markers, city=target_city)
 
     # 写入聊天记录
@@ -826,7 +814,7 @@ def generate_art():
 @api_bp.route('/generate_art/stream', methods=['POST'])
 @auth_required
 def generate_art_stream():
-    """非遗焕新 SSE：推送 GLM-4V 分析 → CogView-4 生成各阶段进度。"""
+    """非遗焕新 SSE：推送视觉理解 → 文生图进度。"""
     req = request.get_json(silent=True) or {}
     user_prompt = req.get('prompt', '将此图片转换为具有现代美感的风格')
     frontend_image_b64 = req.get('image')
@@ -1103,7 +1091,7 @@ TTS:2|讲解词
 【任务3】用一句60字以内的话总结本次路线亮点：
 SUMMARY:总结内容"""
 
-    llm_result = sync_spark_call(llm_prompt)
+    llm_result = sync_llm_call(llm_prompt, temperature=0.3, max_tokens=2048) or ''
     logger.info('LLM 路线规划结果: %s', llm_result)
 
     # ── Step3: 解析 LLM 输出 ──────────────────────────────────

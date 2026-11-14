@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="quiz-root">
 
     <!-- ══ 加载中 ══════════════════════════════════════════════ -->
@@ -6,7 +6,7 @@
       <div class="loading-inner">
         <div class="loading-spinner"></div>
         <div class="loading-title">AI 正在出题中…</div>
-        <div class="loading-sub">讯飞星火大模型根据非遗知识图谱动态生成题目</div>
+        <div class="loading-sub">AI 根据非遗知识图谱动态生成题目</div>
         <div v-if="loadingQuestions.length" class="loading-preview">
           <div v-for="(q, i) in loadingQuestions" :key="i" class="preview-card">
             <span class="preview-badge">Q{{ i + 1 }}</span>
@@ -201,7 +201,7 @@
         <div class="intro-icon" aria-hidden="true">遗</div>
         <div class="intro-title">AI 非遗闯关答题</div>
         <div class="intro-desc">
-          讯飞星火大模型根据非遗知识图谱动态出题，<br>
+          AI 根据非遗知识图谱动态出题，<br>
           考察你对中华非物质文化遗产的了解程度。
         </div>
         <div class="intro-rules">

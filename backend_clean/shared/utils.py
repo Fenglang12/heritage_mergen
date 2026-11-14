@@ -54,19 +54,19 @@ def create_auth_url(request_url, api_key, api_secret, path):
 
 
 # ================================================================
-# 2. 语音转文字（IAT）—— 讯飞大模型中文语音识别 API
-#    接口地址：wss://iat.xf-yun.com/v1
-#    文档：https://www.xfyun.cn/doc/spark/spark_zh_iat.html
+# 2. 语音转文字（IAT）—— 讯飞语音听写大模型（中英）V2.0
+#    接口地址：wss://iat.cn-huabei-1.xf-yun.com/v1
+#    文档：https://www.xfyun.cn/doc/spark/spark_zh_iat_new.html
 # ================================================================
 
 def audio_to_text(audio_bytes):
     """
-    调用讯飞「中英识别大模型」将 PCM/WAV 音频转为文字。
+    调用讯飞「语音听写大模型（中英）V2.0」将 PCM/WAV 音频转为文字。
     接口要求：
-      - URL:  wss://iat.xf-yun.com/v1
+      - URL:  wss://iat.cn-huabei-1.xf-yun.com/v1
       - 音频: 16k 采样率、16bit、单声道、raw(PCM) 格式
       - 每帧: 1280 字节，间隔 40ms
-      - domain 必须为 'slm'（大模型接口固定值）
+      - domain 必须为 'spark_asr_v2'（V2.0 固定值）
       - payload.audio 中必须携带 channels / bit_depth / seq / status 字段
     """
     if not audio_bytes:
@@ -76,6 +76,11 @@ def audio_to_text(audio_bytes):
     pcm_bytes = audio_bytes[44:] if audio_bytes[:4] == b'RIFF' else audio_bytes
 
     state = {'text': '', 'error': None}
+    iat_app_id = Config.IAT_APPID
+    iat_api_key = Config.IAT_API_KEY
+    iat_api_secret = Config.IAT_API_SECRET
+    iat_domain = Config.IAT_DOMAIN or 'spark_asr_v2'
+    iat_url = Config.IAT_URL or 'wss://iat.cn-huabei-1.xf-yun.com/v1'
 
     def on_message(ws, message):
         try:
@@ -133,7 +138,7 @@ def audio_to_text(audio_bytes):
 
             # 官方要求：parameter 只在第一帧发送
             iat_params = {
-                'domain':   'slm',       # 大模型接口固定值
+                'domain':   iat_domain,  # V2.0: spark_asr_v2
                 'language': 'zh_cn',
                 'accent':   'mandarin',
                 'eos':      6000,        # 静音 6 秒后停止
@@ -156,7 +161,7 @@ def audio_to_text(audio_bytes):
                         # 发末帧（空 audio）
                         frame = {
                             'header': {
-                                'app_id': Config.SPARK_APPID,
+                                'app_id': iat_app_id,
                                 'status': 2
                             },
                             'payload': {
@@ -180,7 +185,7 @@ def audio_to_text(audio_bytes):
                         # 首帧：携带 parameter
                         frame = {
                             'header': {
-                                'app_id': Config.SPARK_APPID,
+                                'app_id': iat_app_id,
                                 'status': 0
                             },
                             'parameter': {
@@ -203,7 +208,7 @@ def audio_to_text(audio_bytes):
                         # 中间帧：不含 parameter
                         frame = {
                             'header': {
-                                'app_id': Config.SPARK_APPID,
+                                'app_id': iat_app_id,
                                 'status': 1
                             },
                             'payload': {
@@ -228,13 +233,12 @@ def audio_to_text(audio_bytes):
 
         thread.start_new_thread(run, ())
 
-    # 官方新接口地址（大模型版）
-    IAT_URL = 'wss://iat.xf-yun.com/v1'
-    ws_url  = create_auth_url(
-        IAT_URL,
-        Config.SPARK_API_KEY,
-        Config.SPARK_API_SECRET,
-        urlparse(IAT_URL).path
+    # 语音听写大模型 V2.0
+    ws_url = create_auth_url(
+        iat_url,
+        iat_api_key,
+        iat_api_secret,
+        urlparse(iat_url).path,
     )
 
     logger.info('IAT 连接 URL: %s', ws_url[:80] + '...')
@@ -382,16 +386,65 @@ def sync_spark_call(prompt):
     return text
 
 
+def sync_zhipu_call(prompt, *, temperature=0.3, max_tokens=2048, model=None):
+    """同步调用智谱文本模型（OpenAI 兼容）；失败返回空字符串。"""
+    api_key = (getattr(Config, 'ZHIPU_API_KEY', None) or '').strip()
+    if not api_key:
+        return ''
+    try:
+        from openai import OpenAI
+    except ImportError:
+        logger.error('openai 包未安装，无法调用智谱文本')
+        return ''
+    base = (
+        getattr(Config, 'ZHIPU_BASE_URL', None)
+        or 'https://open.bigmodel.cn/api/paas/v4'
+    )
+    use_model = model or getattr(Config, 'ZHIPU_INTRO_MODEL', None) or 'glm-4-flash'
+    try:
+        client = OpenAI(api_key=api_key, base_url=base)
+        completion = client.chat.completions.create(
+            model=use_model,
+            messages=[{'role': 'user', 'content': prompt}],
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        return (completion.choices[0].message.content or '').strip()
+    except Exception as e:
+        logger.error('智谱文本调用失败: %s', e)
+        return ''
+
+
+def sync_llm_call_meta(prompt, *, temperature=0.3, max_tokens=2048):
+    """统一文本 LLM（智谱）。返回 (text, user_err)；成功时 user_err 为 None。"""
+    if not (getattr(Config, 'ZHIPU_API_KEY', None) or '').strip():
+        return '', '智谱 API Key 未配置，请在 .env 中设置 ZHIPU_API_KEY'
+    ztext = sync_zhipu_call(
+        prompt, temperature=temperature, max_tokens=max_tokens,
+    )
+    if (ztext or '').strip():
+        return ztext.strip(), None
+    return '', '智谱文本模型暂不可用，请稍后重试'
+
+
+def sync_llm_call(prompt, *, temperature=0.3, max_tokens=2048):
+    """统一文本 LLM。"""
+    text, _ = sync_llm_call_meta(
+        prompt, temperature=temperature, max_tokens=max_tokens,
+    )
+    return text
+
+
 def stream_chat_with_llm(context):
-    """流式打字机输出；星火失败时不写入原始错误码，由调用方决定兜底文案。"""
-    text, err = _spark_chat_once(context, temperature=0.5, max_tokens=2048)
-    if err:
+    """流式输出；失败时不产出内容。"""
+    text = sync_zhipu_call(context, temperature=0.5, max_tokens=2048)
+    if not text:
         return
-    yield from (text or '')
+    yield from text
 
 
 # ================================================================
-# 4-b. 地图标点简介（默认讯飞星火批量生成，可选百炼 Qwen）
+# 4-b. 地图标点简介
 # ================================================================
 
 def _minimal_intro_fallback(marker: dict) -> str:
@@ -600,6 +653,35 @@ def _generate_marker_intros_qwen(prompt: str, markers: list) -> dict:
     return _parse_marker_intros_json(raw, markers)
 
 
+def _generate_marker_intros_zhipu(prompt: str, markers: list) -> dict:
+    """智谱 GLM（需有效 ZHIPU_API_KEY；默认免费 glm-4-flash）。"""
+    api_key = (getattr(Config, 'ZHIPU_API_KEY', None) or '').strip()
+    if not api_key:
+        return {}
+
+    try:
+        from openai import OpenAI
+    except ImportError:
+        logger.error('openai 包未安装，无法调用智谱标点简介')
+        return {}
+
+    max_tokens = min(2048, 80 * len(markers) + 128)
+    client = OpenAI(
+        api_key=api_key,
+        base_url=getattr(Config, 'ZHIPU_BASE_URL', None)
+        or 'https://open.bigmodel.cn/api/paas/v4',
+    )
+    model = getattr(Config, 'ZHIPU_INTRO_MODEL', None) or 'glm-4-flash'
+    completion = client.chat.completions.create(
+        model=model,
+        messages=[{'role': 'user', 'content': prompt}],
+        temperature=0.4,
+        max_tokens=max_tokens,
+    )
+    raw = completion.choices[0].message.content or ''
+    return _parse_marker_intros_json(raw, markers)
+
+
 def _generate_marker_intros_spark(markers: list, city: str = None) -> dict:
     """讯飞星火生成标点简介（默认通道，使用 .env 中 SPARK_*）。"""
     prompt = _build_marker_intro_prompt(markers, city, for_spark=True)
@@ -626,20 +708,26 @@ def _generate_marker_intros_spark(markers: list, city: str = None) -> dict:
 
 
 def generate_marker_intros_batch(markers: list, city: str = None) -> dict:
-    """
-    批量生成标点简介。
-    MARKER_INTRO_PROVIDER=spark（默认）| qwen
-    返回 {poi_id: intro_text}。
-    """
+    """批量生成标点简介。通道见 MARKER_INTRO_PROVIDER，返回 {poi_id: intro_text}。"""
     if not markers:
         return {}
 
     provider = (getattr(Config, 'MARKER_INTRO_PROVIDER', None) or 'spark').lower()
+    prompt_json = _build_marker_intro_prompt(markers, city, for_spark=False)
 
-    if provider == 'qwen' and _dashscope_api_key():
-        prompt = _build_marker_intro_prompt(markers, city, for_spark=False)
+    if provider == 'zhipu' and (getattr(Config, 'ZHIPU_API_KEY', None) or '').strip():
         try:
-            parsed = _generate_marker_intros_qwen(prompt, markers)
+            parsed = _generate_marker_intros_zhipu(prompt_json, markers)
+            if parsed:
+                logger.info('标点简介已由智谱生成（%d/%d 条）', len(parsed), len(markers))
+                return parsed
+            logger.warning('智谱标点简介无有效结果，尝试其它通道')
+        except Exception as e:
+            logger.warning('智谱标点简介失败，尝试其它通道: %s', e)
+
+    if provider in ('qwen', 'zhipu') and _dashscope_api_key():
+        try:
+            parsed = _generate_marker_intros_qwen(prompt_json, markers)
             if parsed:
                 return parsed
             logger.warning('Qwen 标点简介无有效结果，改用讯飞星火')
@@ -690,6 +778,84 @@ def strip_thinking_text(text: str) -> str:
     cleaned = re.sub(r'<think\b[^>]*>.*$', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
     cleaned = re.sub(r'</?answer\b[^>]*>', '', cleaned, flags=re.IGNORECASE)
     return cleaned.strip()
+
+
+# 识图/视频溯源：约束模型只输出结构化行（前后端共用）
+SOURCE_TRACE_PROMPT = (
+    '你是非遗识别助手。只根据画面内容输出结果。\n'
+    '输出规则（必须严格遵守）：\n'
+    '1. 每识别到一项非遗，单独一行，格式固定为：\n'
+    '【非遗条目】：XX市 | 非遗项目名\n'
+    '2. 城市必须是地级市全称（如广州市、汕头市）；不确定时写该项目最常见发源地城市。\n'
+    '3. 全部条目写完后，另起一行输出一句概述（不超过40字），不要加「概述：」等前缀。\n'
+    '4. 禁止输出思考过程、括号注释、格式说明、示例、Markdown、编号讲解。\n'
+    '正确示例：\n'
+    '【非遗条目】：广州市 | 粤剧\n'
+    '【非遗条目】：汕头市 | 英歌舞\n'
+    '镜头串联岭南多地非遗表演，展现粤韵与潮汕英歌的活力。'
+)
+
+_SOURCE_META_RE = re.compile(
+    r'(注意|说明|例如|示例|格式|思考|推理|最终输出|所以|因此|注[:：]|Correct|Note\b)',
+    re.IGNORECASE,
+)
+
+
+def _source_city_short(city_raw: str) -> str:
+    """展示用：广东省广州市 → 广州市。"""
+    s = (city_raw or '').strip()
+    if not s:
+        return ''
+    # 去掉省/自治区前缀后再取市级名
+    s = re.sub(r'^[\u4e00-\u9fff]+?(?:省|自治区)', '', s).strip() or s
+    m = re.search(r'([\u4e00-\u9fff]{2,8}市)\s*$', s)
+    if m:
+        return m.group(1)
+    for name in ('北京', '天津', '上海', '重庆'):
+        if name in s:
+            return name + '市'
+    return s
+
+
+def format_heritage_source_report(raw: str) -> str:
+    """清洗溯源模型原文：只保留【非遗条目】行 + 一句概述。"""
+    text = strip_thinking_text(raw or '')
+    if not text:
+        return ''
+
+    entries = []
+    summary = ''
+    for line in text.splitlines():
+        line = line.strip().strip('`').strip()
+        if not line:
+            continue
+        if '【非遗条目】' in line:
+            body = line.split('【非遗条目】', 1)[-1]
+            body = body.lstrip('：:').strip()
+            if '|' in body:
+                city_raw, kw_raw = body.split('|', 1)
+                city = _source_city_short(city_raw)
+                kw = kw_raw.strip()
+            else:
+                city, kw = _source_city_short(body), ''
+            if city or kw:
+                entries.append(f'【非遗条目】：{city} | {kw}'.rstrip(' |'))
+            continue
+        if line.startswith('【') and '条目' in line:
+            continue
+        if _SOURCE_META_RE.search(line):
+            continue
+        if line.startswith(('（', '(')) and line.endswith(('）', ')')):
+            continue
+        if re.match(r'^[\d一二三四五六七八九十]+[、.．]', line):
+            continue
+        if 6 <= len(line) <= 80 and '|' not in line:
+            summary = line
+
+    parts = list(entries)
+    if summary:
+        parts.append(summary)
+    return '\n'.join(parts) if parts else text.strip()
 
 
 def understand_image(img_b64, prompt):
@@ -1743,19 +1909,16 @@ def get_tts_audio(text):
 
 
 # ================================================================
-# 9. 非遗焕新（AI 文生图 / 图生图）
+# 9. 非遗焕新（默认百炼 Qwen-Image 真图生图；可回退智谱文生图）
 # ================================================================
 
-# ── 智谱 AI：图生文（GLM-4V）+ 文生图（CogView-4）双模型串联 ──
+# ── 智谱：视觉理解 + 文生图（备用）────────────────────────────
 ZHIPU_CHAT_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
 ZHIPU_GEN_URL  = "https://open.bigmodel.cn/api/paas/v4/images/generations"
 
 
 def _zhipu_describe_image(b64_img):
-    """
-    GLM-4V 图像理解：分析参考图中的非遗文化元素、视觉特征与构图。
-    返回一段可用于文生图的详细描述文本。
-    """
+    """智谱视觉理解：分析参考图中的非遗文化元素，返回文生图可用描述。"""
     api_key = Config.ZHIPU_API_KEY
     if not api_key:
         logger.warning("智谱 API Key 未配置，跳过参考图分析")
@@ -1774,12 +1937,10 @@ def _zhipu_describe_image(b64_img):
             "role": "user",
             "content": [
                 {"type": "text", "text": (
-                    "请以精炼的中文描述这张非遗文化图片，重点关注："
-                    "1) 核心文化元素（图案、纹样、器物、人物造型等）；"
-                    "2) 色彩体系（主色调、配色风格）；"
-                    "3) 构图特征（对称、留白、层次等）；"
-                    "4) 材质与质感。"
-                    "控制在200字以内，用于后续AI文生图的参考描述。"
+                    "请用精炼中文描述这张参考图，供后续文生图使用。"
+                    "必须写清：1) 画面主体是什么（人物/动物/器物/场景）；"
+                    "2) 外形与材质质感；3) 主色与配色；4) 构图与背景。"
+                    "客观描述所见，不要编造未出现的主体。控制在180字以内。"
                 )},
                 {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{raw_b64}"}}
             ]
@@ -1813,7 +1974,9 @@ def normalize_art_result_url(img_data: str) -> str:
         return raw
     if raw.startswith(('http://', 'https://')):
         try:
-            resp = requests.get(raw, timeout=60)
+            with requests.Session() as sess:
+                sess.trust_env = False
+                resp = sess.get(raw, timeout=60)
             resp.raise_for_status()
             content_type = (resp.headers.get('Content-Type') or 'image/jpeg').split(';')[0]
             if not content_type.startswith('image/'):
@@ -1842,40 +2005,198 @@ def _art_cache_key(prompt: str, b64_img=None) -> str:
     if b64_img:
         raw = b64_img.split(',', 1)[1] if ',' in b64_img else b64_img
         img_part = hashlib.md5(raw[:4096].encode('utf-8', errors='ignore')).hexdigest()[:16]
-    return hashlib.md5(f'{prompt}|{img_part}'.encode()).hexdigest()
+    provider = getattr(Config, 'ART_IMAGE_PROVIDER', 'qwen') or 'qwen'
+    if provider == 'qwen':
+        model = getattr(Config, 'QWEN_IMAGE_MODEL', '') or 'qwen-image-3.0'
+    else:
+        model = getattr(Config, 'ZHIPU_IMAGE_MODEL', '') or ''
+    return hashlib.md5(f'{provider}|{model}|{prompt}|{img_part}'.encode()).hexdigest()
 
 
-def iter_zhipu_art_generation(prompt, b64_img=None):
-    """
-    智谱双模型串联生图（生成器）：yield progress 事件，最后 yield result 事件。
-    progress: {"type": "progress", "stage": str, "text": str, "detail": optional}
-    result:   {"type": "result", "success": bool, "data": url|None, "msg": str, "analysis": str}
-    """
-    if Config.DEMO_MODE:
-        from features.demo.service import get_demo_art, iter_art_simulate_progress
+def _to_data_url_image(b64_img: str) -> str:
+    """把上传图规范为 data URL，供百炼 image 字段使用。"""
+    raw = (b64_img or '').strip()
+    if not raw:
+        return ''
+    if raw.startswith('data:image'):
+        return raw
+    return f'data:image/jpeg;base64,{raw}'
 
-        demo_img, demo_analysis = get_demo_art(prompt)
-        for event in iter_art_simulate_progress(b64_img):
-            yield event
+
+def _dashscope_multimodal_url() -> str:
+    """百炼同步多模态生图（兼容旧 dashscope 域名，无需 Workspace 专属域）。"""
+    return 'https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation'
+
+
+def _qwen_size_star(size: str) -> str:
+    """OpenAI 风格 1024x1024 → DashScope 1024*1024。"""
+    s = (size or '1024x1024').strip().lower().replace('×', 'x').replace('*', 'x')
+    if 'x' in s:
+        w, _, h = s.partition('x')
+        return f'{w.strip()}*{h.strip()}'
+    return '1024*1024'
+
+
+def _extract_qwen_image_url(resp_json: dict) -> str:
+    """从 multimodal-generation 响应里取出图片 URL。"""
+    try:
+        choices = (((resp_json or {}).get('output') or {}).get('choices')) or []
+        content = (((choices[0] or {}).get('message') or {}).get('content')) or []
+        for part in content:
+            if isinstance(part, dict) and part.get('image'):
+                return str(part.get('image') or '').strip()
+            if isinstance(part, dict) and part.get('type') == 'image' and part.get('image'):
+                return str(part.get('image') or '').strip()
+    except Exception:
+        pass
+    return ''
+
+
+def _iter_qwen_art_generation(prompt, b64_img=None):
+    """百炼 Qwen-Image：有参考图走真图生图，无图走文生图。"""
+    api_key = (getattr(Config, 'DASHSCOPE_API_KEY', None) or '').strip()
+    if not api_key:
         yield {
             'type': 'result',
-            'success': True,
-            'data': demo_img or _DEMO_ART_DATA_URL,
-            'msg': '',
-            'analysis': demo_analysis or '剪纸纹样、朱砂红配色、对称构图',
+            'success': False,
+            'data': None,
+            'msg': '百炼 API Key 未配置，请在 .env 中设置 DASHSCOPE_API_KEY（或改 ART_IMAGE_PROVIDER=zhipu）',
+            'analysis': '',
         }
         return
 
-    cache_key = _art_cache_key(prompt, b64_img)
-    cached = _art_cache.get(cache_key)
-    if cached:
-        from features.demo.service import iter_art_simulate_progress
+    user_prompt = (prompt or '').strip() or '请生成一张高品质非遗主题数字艺术作品'
+    model = (getattr(Config, 'QWEN_IMAGE_MODEL', None) or 'qwen-image-3.0').strip()
+    size = _qwen_size_star(getattr(Config, 'QWEN_IMAGE_SIZE', None) or '1024x1024')
+    analysis = ''
 
-        for event in iter_art_simulate_progress(b64_img):
-            yield event
-        yield {'type': 'result', 'success': True, 'data': cached, 'msg': '', 'analysis': ''}
+    if b64_img:
+        yield {
+            'type': 'progress',
+            'stage': 'glm_start',
+            'text': '已收到参考图，准备进行图生图创作…',
+        }
+        yield {
+            'type': 'progress',
+            'stage': 'cogview_start',
+            'text': f'{model} 正在按参考图与文字绘制焕新作品…',
+        }
+        analysis = '图生图：参考图 + 用户文案'
+        content = [
+            {'image': _to_data_url_image(b64_img)},
+            {'text': user_prompt},
+        ]
+    else:
+        yield {
+            'type': 'progress',
+            'stage': 'text_only',
+            'text': '未提供参考图，将按文字创意直接文生图',
+        }
+        yield {
+            'type': 'progress',
+            'stage': 'cogview_start',
+            'text': f'{model} 正在按文字创意绘制焕新作品…',
+        }
+        content = [{'text': user_prompt}]
+
+    body = {
+        'model': model,
+        'input': {
+            'messages': [
+                {'role': 'user', 'content': content},
+            ],
+        },
+        'parameters': {
+            'size': size,
+            'n': 1,
+            'prompt_extend': True,
+            'watermark': False,
+        },
+    }
+
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json',
+    }
+    url = _dashscope_multimodal_url()
+    # trust_env=False：避开本机失效 HTTP(S)_PROXY 导致的 ProxyError
+    try:
+        with requests.Session() as sess:
+            sess.trust_env = False
+            resp = sess.post(url, json=body, headers=headers, timeout=180)
+        resp_json = resp.json() if resp.content else {}
+        if resp.status_code != 200:
+            err = (
+                (resp_json.get('error') or {}).get('message')
+                or resp_json.get('message')
+                or str(resp_json)[:300]
+            )
+            yield {
+                'type': 'result',
+                'success': False,
+                'data': None,
+                'msg': f'百炼生图错误: {err}',
+                'analysis': analysis,
+            }
+            return
+        # 业务错误偶发仍返回 200 + code
+        if resp_json.get('code') and str(resp_json.get('code')).upper() not in ('', 'SUCCESS'):
+            yield {
+                'type': 'result',
+                'success': False,
+                'data': None,
+                'msg': f"百炼生图错误: {resp_json.get('message') or resp_json.get('code')}",
+                'analysis': analysis,
+            }
+            return
+    except requests.exceptions.Timeout:
+        yield {
+            'type': 'result',
+            'success': False,
+            'data': None,
+            'msg': '百炼生图超时（180s），请重试或简化提示词',
+            'analysis': analysis,
+        }
+        return
+    except Exception as e:
+        yield {
+            'type': 'result',
+            'success': False,
+            'data': None,
+            'msg': f'百炼生图请求异常: {e}',
+            'analysis': analysis,
+        }
         return
 
+    img_url = _extract_qwen_image_url(resp_json)
+    if not img_url:
+        yield {
+            'type': 'result',
+            'success': False,
+            'data': None,
+            'msg': '未返回图片数据，请重试',
+            'analysis': analysis,
+        }
+        return
+
+    final_url = normalize_art_result_url(img_url)
+    cache_key = _art_cache_key(prompt, b64_img)
+    if len(_art_cache) >= _ART_CACHE_MAX:
+        _art_cache.pop(next(iter(_art_cache)))
+    _art_cache[cache_key] = final_url
+
+    yield {'type': 'progress', 'stage': 'done', 'text': '焕新作品生成完成'}
+    yield {
+        'type': 'result',
+        'success': True,
+        'data': final_url,
+        'msg': '',
+        'analysis': analysis,
+    }
+
+
+def _iter_zhipu_t2i_art_generation(prompt, b64_img=None):
+    """智谱文生图备用：有参考图时先视觉描述再文生图（非真图生图）。"""
     api_key = Config.ZHIPU_API_KEY
     if not api_key:
         yield {
@@ -1903,10 +2224,11 @@ def iter_zhipu_art_generation(prompt, b64_img=None):
                 'detail': img_desc,
             }
             combined_prompt = (
-                f'【参考图核心特征】{img_desc}\n'
-                f'【创作要求】{prompt}\n'
-                f'请基于参考图的非遗文化特征，按创作要求重新生成数字艺术品。'
-                f'保留文化内核，融入现代视觉表达，画面精致，光影高级。'
+                f'创作要求（优先遵循）：{prompt}\n'
+                f'参考图主体与视觉特征：{img_desc}\n'
+                '请生成一张与创作要求一致的高品质数字艺术品；'
+                '若参考图主体与创作要求冲突，以创作要求中的主体为准，并吸收参考图的材质/色彩气质；'
+                '构图完整、主体清晰、细节丰富，禁止无关空镜风景。'
             )
         else:
             yield {'type': 'progress', 'stage': 'glm_skip', 'text': '参考图分析未完成，将仅按文字创意生成'}
@@ -1915,13 +2237,14 @@ def iter_zhipu_art_generation(prompt, b64_img=None):
 
     yield {'type': 'progress', 'stage': 'cogview_start', 'text': '图像模型正在绘制焕新艺术品…'}
 
-    model = Config.ZHIPU_IMAGE_MODEL
-    quality = 'hd' if len(combined_prompt.strip()) > 60 else 'standard'
+    model = (Config.ZHIPU_IMAGE_MODEL or 'cogview-3-flash').strip()
+    size = '1280x1280' if model.startswith('glm-image') else '1024x1024'
+    quality = 'hd' if model.startswith('glm-image') else 'standard'
     headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
     body = {
         'model': model,
         'prompt': combined_prompt,
-        'size': '1024x1024',
+        'size': size,
         'quality': quality,
         'watermark_enabled': False,
     }
@@ -1952,6 +2275,7 @@ def iter_zhipu_art_generation(prompt, b64_img=None):
 
     img_url = data_list[0]['url']
     final_url = normalize_art_result_url(img_url)
+    cache_key = _art_cache_key(prompt, b64_img)
     if len(_art_cache) >= _ART_CACHE_MAX:
         _art_cache.pop(next(iter(_art_cache)))
     _art_cache[cache_key] = final_url
@@ -1960,9 +2284,47 @@ def iter_zhipu_art_generation(prompt, b64_img=None):
     yield {'type': 'result', 'success': True, 'data': final_url, 'msg': '', 'analysis': img_desc}
 
 
+def iter_zhipu_art_generation(prompt, b64_img=None):
+    """
+    焕新生图主入口（生成器）：yield progress / result。
+    默认 ART_IMAGE_PROVIDER=qwen → 百炼 Qwen-Image 真图生图；
+    设为 zhipu 时回退智谱「描述+文生图」。
+    """
+    if Config.DEMO_MODE:
+        from features.demo.service import get_demo_art, iter_art_simulate_progress
+
+        demo_img, demo_analysis = get_demo_art(prompt)
+        for event in iter_art_simulate_progress(b64_img):
+            yield event
+        yield {
+            'type': 'result',
+            'success': True,
+            'data': demo_img or _DEMO_ART_DATA_URL,
+            'msg': '',
+            'analysis': demo_analysis or '剪纸纹样、朱砂红配色、对称构图',
+        }
+        return
+
+    cache_key = _art_cache_key(prompt, b64_img)
+    cached = _art_cache.get(cache_key)
+    if cached:
+        from features.demo.service import iter_art_simulate_progress
+
+        for event in iter_art_simulate_progress(b64_img):
+            yield event
+        yield {'type': 'result', 'success': True, 'data': cached, 'msg': '', 'analysis': ''}
+        return
+
+    provider = (getattr(Config, 'ART_IMAGE_PROVIDER', None) or 'qwen').lower()
+    if provider == 'qwen':
+        yield from _iter_qwen_art_generation(prompt, b64_img)
+        return
+    yield from _iter_zhipu_t2i_art_generation(prompt, b64_img)
+
+
 def execute_zhipu_art_generation(prompt, b64_img=None, on_progress=None):
     """
-    智谱双模型串联生图（同步封装）。
+    焕新生图同步封装（兼容旧函数名）。
     on_progress(stage, text, detail=None) 可选，用于 Agent / SSE 推送中间态。
     """
     result = None

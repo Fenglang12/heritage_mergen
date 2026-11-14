@@ -44,7 +44,10 @@
   --el-border-color:        var(--color-border);
   --el-border-color-light:  var(--color-border-soft);
   --el-fill-color-light:    var(--color-bg-hover);
-  --el-fill-color-blank:    var(--color-bg-card);
+  /* 默认按钮底色；勿回落到 EP 的纯白 */
+  --el-fill-color-blank:    #22262f;
+  --el-fill-color:          #1c1f27;
+  --el-fill-color-dark:     #161920;
 
   /* 圆角 */
   --radius-sm: 6px;
@@ -137,6 +140,49 @@ html, body, #app {
 .el-button--primary:hover {
   background-color: #4db5a2 !important;
   border-color: #4db5a2 !important;
+}
+
+/*
+ * 默认按钮（无 type / type=default）：
+ * EP 新版常只有 .el-button，不一定带 .el-button--default，必须一起覆盖。
+ */
+.el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-text):not(.is-link):not(.el-button--text),
+.el-button--default {
+  --el-button-bg-color: #22262f;
+  --el-button-border-color: #3a4258;
+  --el-button-text-color: #a8b0c4;
+  --el-button-hover-bg-color: rgba(61, 158, 140, 0.14);
+  --el-button-hover-border-color: rgba(61, 158, 140, 0.5);
+  --el-button-hover-text-color: #3d9e8c;
+  --el-button-active-bg-color: rgba(61, 158, 140, 0.2);
+  --el-button-active-border-color: #3d9e8c;
+  --el-button-active-text-color: #3d9e8c;
+  --el-button-disabled-bg-color: #161920;
+  --el-button-disabled-border-color: #2a2e38;
+  --el-button-disabled-text-color: #4a4f62;
+  background-color: #22262f !important;
+  border-color: #3a4258 !important;
+  color: #a8b0c4 !important;
+}
+.el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-text):not(.is-link):not(.el-button--text):hover,
+.el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-text):not(.is-link):not(.el-button--text):focus,
+.el-button--default:hover,
+.el-button--default:focus {
+  background-color: rgba(61, 158, 140, 0.14) !important;
+  border-color: rgba(61, 158, 140, 0.5) !important;
+  color: #3d9e8c !important;
+}
+.el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-text):not(.is-link):not(.el-button--text):active,
+.el-button--default:active {
+  background-color: rgba(61, 158, 140, 0.2) !important;
+  border-color: #3d9e8c !important;
+  color: #3d9e8c !important;
+}
+.el-button--default.is-plain,
+.el-button.is-plain:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info) {
+  background-color: transparent !important;
+  border-color: #3a4258 !important;
+  color: #a8b0c4 !important;
 }
 
 /* 标签 */

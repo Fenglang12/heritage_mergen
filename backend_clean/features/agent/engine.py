@@ -45,7 +45,7 @@ from shared.utils import (
     _query_search_intent,
     format_spark_user_error,
     strip_legacy_spark_error_text,
-    sync_spark_call_meta,
+    sync_llm_call_meta,
 )
 
 logger = logging.getLogger(__name__)
@@ -492,11 +492,11 @@ class HeritageAgent:
         if not parts:
             if should_hint_location(user_msg):
                 parts.append(
-                    '地图检索已完成，但星火文字总结暂不可用；请点击文末链接在非遗地图中查看标点详情。'
+                    '地图检索已完成，但文字总结暂不可用；请点击文末链接在非遗地图中查看标点详情。'
                 )
             else:
                 parts.append(
-                    '相关功能已执行，但星火文字总结暂不可用，请稍后在侧边栏继续使用地图、图谱或焕新等功能。',
+                    '相关功能已执行，但文字总结暂不可用，请稍后在侧边栏继续使用地图、图谱或焕新等功能。',
                 )
         body = '\n\n'.join(parts)
         if self._spark_degraded and body:
@@ -534,11 +534,11 @@ class HeritageAgent:
 {user_msg}
 
 请决定：输出 <tool_call> 或给出可直接回复用户的完整答案（含与意图一致的单行主动推荐）。"""
-        text, user_err = sync_spark_call_meta(prompt)
+        text, user_err = sync_llm_call_meta(prompt)
         if user_err:
             self._spark_error_detail = user_err
             if not self._spark_degraded:
-                logger.warning('星火不可用，将尽量仅用工具结果回答: %s', user_err[:200])
+                logger.warning('LLM 不可用，将尽量仅用工具结果回答: %s', user_err[:200])
                 self._spark_degraded = True
             return ''
         return text
@@ -606,7 +606,7 @@ class HeritageAgent:
 【用户问题】
 {user_msg}
 """
-        text, user_err = sync_spark_call_meta(
+        text, user_err = sync_llm_call_meta(
             prompt, temperature=0.5, max_tokens=2048,
         )
         text = strip_legacy_spark_error_text(text)

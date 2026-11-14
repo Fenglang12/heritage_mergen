@@ -1,8 +1,9 @@
-﻿<template>
+<template>
   <div class="voice-bar">
     <el-button
       size="small"
-      :type="isRecording ? 'danger' : 'default'"
+      :type="isRecording ? 'danger' : ''"
+      class="voice-btn"
       @mousedown="startRecording"
       @mouseup="stopRecording"
       @mouseleave="isRecording && stopRecording()"
@@ -41,5 +42,18 @@ const { isRecording, startRecording, stopRecording } = useVoiceInput((text) => {
 .voice-hint {
   font-size: 11px;
   color: var(--color-text-muted);
+}
+.voice-btn:not(.el-button--danger) {
+  --el-button-bg-color: #22262f;
+  --el-button-border-color: #3a4258;
+  --el-button-text-color: #a8b0c4;
+  background: #22262f !important;
+  border-color: #3a4258 !important;
+  color: #a8b0c4 !important;
+}
+.voice-btn:not(.el-button--danger):hover {
+  background: rgba(61, 158, 140, 0.14) !important;
+  border-color: rgba(61, 158, 140, 0.5) !important;
+  color: #3d9e8c !important;
 }
 </style>

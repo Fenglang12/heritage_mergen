@@ -75,7 +75,7 @@
           <ul v-if="progressLog.length" class="progress-log">
             <li v-for="(line, i) in progressLog" :key="i">{{ line }}</li>
           </ul>
-          <p class="waiting-sub">GLM-4V 文化解读 → CogView-4 数字绘制，请稍候…</p>
+          <p class="waiting-sub">{{ waitingSub }}</p>
         </div>
 
         <!-- 空态 -->
@@ -127,8 +127,17 @@ const btnPhase   = ref(0)
 const progressText = ref('')
 const progressLog  = ref([])
 
-const phases = ['GLM-4V 分析文化元素…', '融合非遗特征与创意…', 'CogView-4 绘制中…', '即将完成…']
-const btnText = computed(() => phases[btnPhase.value % phases.length])
+const phasesWithRef = ['已收到参考图…', '按参考图与文字融合创作…', '图生图绘制中…', '即将完成…']
+const phasesTextOnly = ['理解文字创意…', '构思画面构图…', '文生图绘制中…', '即将完成…']
+const btnText = computed(() => {
+  const phases = imageB64.value ? phasesWithRef : phasesTextOnly
+  return phases[btnPhase.value % phases.length]
+})
+const waitingSub = computed(() =>
+  imageB64.value
+    ? '图生图模式：参考图 + 文字描述 → Qwen-Image 绘制，请稍候…'
+    : '文生图模式：仅按文字描述 → Qwen-Image 绘制，请稍候…'
+)
 const lastPromptShort = computed(() => lastPrompt.value.slice(0, 40) + (lastPrompt.value.length > 40 ? '...' : ''))
 
 let phaseTimer = null

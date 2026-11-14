@@ -75,7 +75,7 @@ export const analyzeSourceVideo = (video, session_id) => api.post('/analyze_sour
 // ── 焕新 ────────────────────────────────────────────────────
 export const generateArt  = (prompt, image, session_id) => api.post('/generate_art', { prompt, image, session_id })
 
-/** 非遗焕新 SSE（GLM-4V → CogView-4 阶段进度） */
+/** 非遗焕新 SSE */
 export const generateArtStream = (prompt, image) =>
   fetch('/api/generate_art/stream', {
     method: 'POST',

@@ -250,7 +250,7 @@ def tool_identify_image(image_b64: str) -> dict:
 
 
 def tool_revive_heritage(prompt: str, image_b64: str = None, on_progress=None) -> dict:
-    """非遗数字焕新：GLM-4V 分析参考图 + CogView-4 生成。"""
+    """非遗数字焕新：视觉理解参考图 + 文生图。"""
     prompt = (prompt or '').strip()
     if not prompt:
         return {'ok': False, 'error': '缺少创作描述 prompt，请说明想要的风格或效果'}
@@ -544,7 +544,7 @@ TOOL_REGISTRY = {
             args.get('prompt', ''),
             args.get('image_b64'),
         ),
-        'label': '非遗数字焕新（GLM-4V + CogView-4）',
+        'label': '非遗数字焕新',
     },
     'plan_study_tour': {
         'fn': lambda args: tool_plan_study_tour(

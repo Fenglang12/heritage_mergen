@@ -38,12 +38,22 @@ class Config:
     SPARK_APPID = _env('SPARK_APPID')
     SPARK_API_SECRET = _env('SPARK_API_SECRET')
     SPARK_API_KEY = _env('SPARK_API_KEY')
-    SPARK_URL = 'wss://spark-api.xf-yun.com/v3.1/chat'
-    SPARK_DOMAIN = 'generalv3'
+    # 可按控制台开通的模型切换，例如 Ultra: v4.0/chat + 4.0Ultra
+    SPARK_URL = _env('SPARK_URL', 'wss://spark-api.xf-yun.com/v3.1/chat') or (
+        'wss://spark-api.xf-yun.com/v3.1/chat'
+    )
+    SPARK_DOMAIN = _env('SPARK_DOMAIN', 'generalv3') or 'generalv3'
 
     IMAGE_URL = 'wss://spark-api.cn-huabei-1.xf-yun.com/v2.1/image'
     TTS_URL = 'wss://tts-api.xfyun.cn/v2/tts'
-    IAT_URL = 'wss://iat.xf-yun.com/v1'
+    # 语音听写大模型（中英）V2.0；可与星火对话使用不同 APPID（见 IAT_*）
+    IAT_URL = _env('IAT_URL', 'wss://iat.cn-huabei-1.xf-yun.com/v1') or (
+        'wss://iat.cn-huabei-1.xf-yun.com/v1'
+    )
+    IAT_DOMAIN = _env('IAT_DOMAIN', 'spark_asr_v2') or 'spark_asr_v2'
+    IAT_APPID = _env('IAT_APPID') or SPARK_APPID
+    IAT_API_KEY = _env('IAT_API_KEY') or SPARK_API_KEY
+    IAT_API_SECRET = _env('IAT_API_SECRET') or SPARK_API_SECRET
 
     # ── 阿里云百炼 ────────────────────────────────────────────
     DASHSCOPE_API_KEY = _env('DASHSCOPE_API_KEY')
@@ -56,10 +66,18 @@ class Config:
     VIDEO_BASE_URL = _env('VIDEO_BASE_URL')
     VIDEO_API_KEY = _env('VIDEO_API_KEY')
     QWEN_INTRO_MODEL = _env('QWEN_INTRO_MODEL', 'qwen3-max')
-    _marker_provider = _env('MARKER_INTRO_PROVIDER', 'spark').lower()
+    ZHIPU_INTRO_MODEL = _env('ZHIPU_INTRO_MODEL', 'glm-4-flash') or 'glm-4-flash'
+    ZHIPU_BASE_URL = _env(
+        'ZHIPU_BASE_URL', 'https://open.bigmodel.cn/api/paas/v4'
+    ) or 'https://open.bigmodel.cn/api/paas/v4'
+    _marker_provider = _env('MARKER_INTRO_PROVIDER', 'zhipu').lower()
     if _marker_provider in ('qwen3', 'qwen-max', 'dashscope'):
         _marker_provider = 'qwen'
-    MARKER_INTRO_PROVIDER = _marker_provider if _marker_provider in ('spark', 'qwen') else 'spark'
+    if _marker_provider in ('glm', 'zhipuai', 'bigmodel'):
+        _marker_provider = 'zhipu'
+    MARKER_INTRO_PROVIDER = (
+        _marker_provider if _marker_provider in ('spark', 'qwen', 'zhipu') else 'zhipu'
+    )
     try:
         SOURCE_TRACE_MAX_MARKERS = max(1, int(_env('SOURCE_TRACE_MAX_MARKERS', '10') or '10'))
     except ValueError:
@@ -67,8 +85,19 @@ class Config:
 
     # ── 智谱 AI ───────────────────────────────────────────────
     ZHIPU_API_KEY = _env('ZHIPU_API_KEY')
-    ZHIPU_IMAGE_MODEL = _env('ZHIPU_IMAGE_MODEL', 'cogview-4-250304')
+    ZHIPU_IMAGE_MODEL = _env('ZHIPU_IMAGE_MODEL', 'cogview-3-flash') or 'cogview-3-flash'
     ZHIPU_VISION_MODEL = _env('ZHIPU_VISION_MODEL', 'glm-4v')
+
+    # ── 焕新生图通道 ───────────────────────────────────────────
+    # qwen：百炼 Qwen-Image（真图生图+文生图）；zhipu：智谱文生图（参考图仅作描述辅助）
+    _art_provider = (_env('ART_IMAGE_PROVIDER', 'qwen') or 'qwen').lower()
+    if _art_provider in ('dashscope', 'bailian', 'qwen-image'):
+        _art_provider = 'qwen'
+    if _art_provider in ('glm', 'cogview', 'zhipuai'):
+        _art_provider = 'zhipu'
+    ART_IMAGE_PROVIDER = _art_provider if _art_provider in ('qwen', 'zhipu') else 'qwen'
+    QWEN_IMAGE_MODEL = _env('QWEN_IMAGE_MODEL', 'qwen-image-3.0') or 'qwen-image-3.0'
+    QWEN_IMAGE_SIZE = _env('QWEN_IMAGE_SIZE', '1024x1024') or '1024x1024'
 
     # 演示模式
     _demo_mode = _env('DEMO_MODE', 'false').lower()

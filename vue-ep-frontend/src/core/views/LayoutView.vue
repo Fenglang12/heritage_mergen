@@ -48,7 +48,7 @@
             <div class="menu-group-label" v-if="!collapsed">知 识</div>
             <el-menu-item index="/chat">
               <el-icon><ChatDotRound /></el-icon>
-              <template #title>星火向导问答</template>
+              <template #title>智能向导问答</template>
             </el-menu-item>
             <el-menu-item index="/graph">
               <el-icon><Share /></el-icon>
@@ -181,7 +181,7 @@ const titleMap = {
   '/map':       '周边非遗地图',
   '/source':    '非遗溯源',
   '/revive':    '非遗数字焕新',
-  '/chat':      '星火向导问答',
+  '/chat':      '智能向导问答',
   '/graph':     '知识图谱透视',
   '/quiz':      'AI闯关答题',
   '/report':    '非遗研学报告',

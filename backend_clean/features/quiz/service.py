@@ -7,7 +7,7 @@ import re
 import pymysql
 
 from core.config import Config
-from shared.utils import sync_spark_call
+from shared.utils import sync_llm_call
 
 logger = logging.getLogger(__name__)
 
@@ -110,15 +110,22 @@ def generate_quiz_questions():
 2. 每题只用对应那一条数据，禁止混用
 3. 错误选项用同类型真实信息，不能捏造
 """
-    raw = sync_spark_call(prompt)
+    raw = sync_llm_call(prompt, temperature=0.2, max_tokens=2500) or ''
     try:
         cleaned = raw.strip()
+        if not cleaned:
+            raise ValueError('模型未返回内容，请检查智谱 API Key 与额度')
         if '```' in cleaned:
             cleaned = re.sub(r'```(?:json)?', '', cleaned).strip('` \n')
+        # 容错：截取首个 JSON 数组
+        if not cleaned.startswith('['):
+            m = re.search(r'\[[\s\S]*\]', cleaned)
+            if m:
+                cleaned = m.group(0)
         questions = json.loads(cleaned)
         if not isinstance(questions, list) or not questions:
             raise ValueError('返回题目为空')
         return questions, None
     except Exception as exc:
-        logger.error('Spark 出题解析失败: %s\nraw=%s', exc, raw[:500])
+        logger.error('出题解析失败: %s\nraw=%s', exc, (raw or '')[:500])
         return None, f'AI出题失败，请重试（{exc}）'

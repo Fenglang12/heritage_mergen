@@ -13,10 +13,7 @@ logger = logging.getLogger(__name__)
 
 class MySQLGraphRAG:
     def __init__(self, llm_func):
-        """
-        初始化图谱 RAG 引擎。
-        llm_func: 传入 utils.py 的 sync_spark_call，用于 Text2SQL 和最终总结
-        """
+        """llm_func：用于 Text2SQL 与最终总结。"""
         self.llm_call  = llm_func
         self.db_config = {
             'host':        Config.DB_HOST,
@@ -131,7 +128,7 @@ class MySQLGraphRAG:
 专家回答："""
         answer = (self.llm_call(final_prompt) or '').strip()
         if not answer:
-            answer = '图谱总结服务暂时不可用，请稍后重试或检查星火配置。'
+            answer = '图谱总结服务暂时不可用，请稍后重试或检查大模型配置。'
         return {
             'ok': True,
             'answer': answer,

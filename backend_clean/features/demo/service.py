@@ -54,23 +54,21 @@ def iter_art_simulate_progress(b64_img=None):
         yield {
             'type': 'progress',
             'stage': 'glm_start',
-            'text': 'GLM-4V 正在分析参考图中的非遗文化元素…',
+            'text': '已收到参考图，准备进行图生图创作…',
         }
     else:
         yield {
             'type': 'progress',
             'stage': 'text_only',
-            'text': '未提供参考图，CogView-4 将按文字创意直接生成',
+            'text': '未提供参考图，将按文字创意直接文生图',
         }
     if delay > 0:
         time.sleep(delay * 0.45)
-    if b64_img:
-        yield {
-            'type': 'progress',
-            'stage': 'glm_done',
-            'text': '已提取非遗纹样与色彩特征',
-        }
-    yield {'type': 'progress', 'stage': 'cogview_start', 'text': 'CogView-4 正在绘制焕新艺术品…'}
+    yield {
+        'type': 'progress',
+        'stage': 'cogview_start',
+        'text': 'Qwen-Image 正在绘制焕新艺术品…',
+    }
     if delay > 0:
         time.sleep(delay * 0.55)
 

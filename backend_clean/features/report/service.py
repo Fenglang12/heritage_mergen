@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from core.exts import db
 from core.models import ChatHistory, ChatSession, Checkin, QuizScore, StudyReport, UserArtwork
 from features.revive.artwork import list_user_artworks
-from shared.utils import sync_spark_call
+from shared.utils import sync_llm_call
 
 logger = logging.getLogger(__name__)
 
@@ -170,7 +170,7 @@ def build_report_payload(user_id: int, username: str) -> dict:
 数字焕新创作（{len(data.get('artworks') or [])} 件）：
 {json.dumps([{'prompt': a.get('prompt'), 'date': a.get('created_at')} for a in (data.get('artworks') or [])], ensure_ascii=False) or '（暂无）'}
 """
-    raw = sync_spark_call(prompt)
+    raw = sync_llm_call(prompt, temperature=0.3, max_tokens=2048) or ''
     try:
         cleaned = raw.strip()
         if '```' in cleaned:
@@ -199,7 +199,7 @@ def build_report_payload(user_id: int, username: str) -> dict:
                 'overview': f'{username}，你已开启非遗研学之旅。',
                 'knowledge': f'已完成 {len(data["quiz_stats"])} 次闯关答题。',
                 'footprint': f'已打卡 {len(data["checkin_sites"])} 处文化地标。',
-                'recommendation': '可继续查看地图非遗地标，或向星火向导提问。',
+                'recommendation': '可继续查看地图非遗地标，或向智能向导提问。',
                 'keywords': ['非遗', '传承', '探索', '研学', '文化'],
                 'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M'),
                 'stats': {

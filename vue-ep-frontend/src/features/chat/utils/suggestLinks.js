@@ -1,3 +1,5 @@
+import { marked } from 'marked'
+
 /** Agent 回答末尾功能推荐链接：路径与默认文案（对话不引导至闯关 /quiz） */
 export const AGENT_PATH_LABELS = {
   '/map': '打开非遗地图',
@@ -50,12 +52,33 @@ export function normalizeAgentSuggestLinks(text) {
   return rewriteQuizLinks(out)
 }
 
-/** 将 Agent 文本转为可展示 HTML（含可点击推荐链接，仅白名单路径） */
-export function renderAgentMessageHtml(text) {
-  let html = normalizeAgentSuggestLinks(text).replace(/\n/g, '<br>')
-  html = html.replace(
-    VALID_PATH_LINK_RE,
-    '<a href="$2" class="agent-suggest-link" data-path="$2">$1</a>',
+marked.setOptions({
+  gfm: true,
+  breaks: true, // 单换行也转 <br>，贴近聊天习惯
+})
+
+/** 站内白名单链接 → 可点击的 agent-suggest-link（由 ChatView 拦截跳转） */
+function decorateAgentLinks(html) {
+  return html.replace(
+    /<a\s+([^>]*?)href="(\/[^"]+)"([^>]*)>([\s\S]*?)<\/a>/gi,
+    (match, pre, href, post, label) => {
+      const base = href.split('?')[0].replace(/\/+$/, '') || href
+      if (!VALID_PATHS.has(base)) return match
+      return `<a href="${href}" class="agent-suggest-link" data-path="${base}">${label}</a>`
+    },
   )
-  return html
+}
+
+/**
+ * 将 Agent 文本转为可展示 HTML：
+ * 1) 规范化站内 Markdown 链接
+ * 2) marked 解析 **加粗** / --- 分割线 / - 列表 / [文](路径) 等
+ * 3) 白名单路径加 data-path，供气泡点击路由跳转
+ */
+export function renderAgentMessageHtml(text) {
+  const normalized = normalizeAgentSuggestLinks(text || '')
+  // 仍保留对原始 md 链接的一次校正，再交给 marked
+  const withFixedMd = normalized.replace(VALID_PATH_LINK_RE, '[$1]($2)')
+  const html = marked.parse(withFixedMd, { async: false })
+  return decorateAgentLinks(typeof html === 'string' ? html : String(html || ''))
 }
