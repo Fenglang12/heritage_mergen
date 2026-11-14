@@ -28,11 +28,9 @@ heritage_mergen/
 │   ├── clean_edges.json    # 清洗后图谱边
 │   └── features/           # Agent / 图谱 / 焕新 / 答题 / 报告 / 社区
 ├── vue-ep-frontend/        # Vue 3 前端（详见 vue-ep-frontend/README.md）
-├── docs/                   # 答辩文档、文件结构说明、Agent 优化路线图
 ├── scripts/                # 辅助脚本
-└── .cursor/rules/          # 开发约定（登录页保护、优化路线图会话前置）
+└── .cursor/rules/          # 开发约定（登录页保护等）
 ```
-
 
 ---
 
