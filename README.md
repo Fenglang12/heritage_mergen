@@ -1,7 +1,7 @@
 # 时空匠影 · 非遗研学工作站
 
 
-前后端分离：`backend_clean`（Flask API）+ `vue-ep-frontend`（Vue 3）
+
 
 ---
 
