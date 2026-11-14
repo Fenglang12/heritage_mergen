@@ -33,7 +33,6 @@ heritage_mergen/
 └── .cursor/rules/          # 开发约定（登录页保护、优化路线图会话前置）
 ```
 
-更细的目录地图见 [`docs/项目文件结构说明.md`](docs/项目文件结构说明.md)；Agent 十项改进清单见 [`docs/10_Agent优化路线图.md`](docs/10_Agent优化路线图.md)。
 
 ---
 
